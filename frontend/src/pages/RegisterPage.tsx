@@ -12,6 +12,7 @@ import { cn } from '@/utils/cn'
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
@@ -40,16 +41,41 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      const { confirmPassword, ...registerData } = data
+      const { confirmPassword, firstName, lastName, ...formData } = data
+      const registerData = {
+        ...formData,
+        first_name: firstName,
+        last_name: lastName,
+        password_confirm: confirmPassword,
+      }
       const response = await apiClient.register(registerData)
       setUser(response.user)
       setTokens(response.access, response.refresh)
 
       toast.success('Account created successfully!')
       navigate('/dashboard', { replace: true })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error)
-      toast.error('Failed to create account. Please try again.')
+
+      // Show specific error messages from the API
+      if (error.response?.data) {
+        const errorData = error.response.data
+        if (typeof errorData === 'string') {
+          toast.error(errorData)
+        } else if (errorData.error) {
+          toast.error(errorData.error)
+        } else if (errorData.email) {
+          toast.error(`Email: ${errorData.email[0]}`)
+        } else if (errorData.username) {
+          toast.error(`Username: ${errorData.username[0]}`)
+        } else if (errorData.password) {
+          toast.error(`Password: ${errorData.password[0]}`)
+        } else {
+          toast.error('Failed to create account. Please check your information.')
+        }
+      } else {
+        toast.error('Failed to create account. Please try again.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -110,6 +136,25 @@ export default function RegisterPage() {
                   <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
                 )}
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <input
+                {...register('username')}
+                type="text"
+                autoComplete="username"
+                className={cn(
+                  'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm',
+                  errors.username && 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                )}
+                placeholder="Choose a username"
+              />
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+              )}
             </div>
 
             <div>

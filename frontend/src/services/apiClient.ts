@@ -82,7 +82,7 @@ class ApiClient {
 
   // Authentication endpoints
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/auth/login/', {
+    const response = await this.client.post<AuthResponse>('/v1/auth/login/', {
       email,
       password,
     })
@@ -90,14 +90,14 @@ class ApiClient {
   }
 
   async register(userData: RegisterData): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/auth/register/', userData)
+    const response = await this.client.post<AuthResponse>('/v1/auth/register/', userData)
     return response.data
   }
 
   async refreshToken(): Promise<{ access: string; refresh: string }> {
     const refreshToken = useAuthStore.getState().refreshToken
     const response = await this.client.post<{ access: string; refresh: string }>(
-      '/auth/refresh/',
+      '/v1/auth/token/refresh/',
       { refresh: refreshToken }
     )
     return response.data
@@ -106,7 +106,7 @@ class ApiClient {
   async logout(): Promise<void> {
     const refreshToken = useAuthStore.getState().refreshToken
     try {
-      await this.client.post('/auth/logout/', { refresh: refreshToken })
+      await this.client.post('/v1/auth/logout/', { refresh: refreshToken })
     } catch (error) {
       // Continue with logout even if server request fails
       console.warn('Logout request failed:', error)
@@ -114,8 +114,25 @@ class ApiClient {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await this.client.get<User>('/auth/user/')
+    const response = await this.client.get<User>('/v1/auth/profile/')
     return response.data
+  }
+
+  async updateProfile(data: Partial<User>): Promise<User> {
+    const response = await this.client.patch<User>('/v1/auth/profile/', data)
+    return response.data
+  }
+
+  async changePassword(data: {
+    current_password: string;
+    new_password: string;
+    new_password_confirm: string;
+  }): Promise<void> {
+    await this.client.post('/v1/auth/change-password/', data)
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    await this.client.post('/v1/auth/password-reset/', { email })
   }
 
   // Artifact endpoints

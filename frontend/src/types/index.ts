@@ -2,18 +2,20 @@
 export interface User {
   id: number;
   email: string;
-  firstName: string;
-  lastName: string;
-  profile: UserProfile;
-}
-
-export interface UserProfile {
-  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  profile_image?: string;
+  phone?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  website_url?: string;
   bio?: string;
   location?: string;
-  website?: string;
-  createdAt: string;
-  updatedAt: string;
+  preferred_cv_template?: number;
+  email_notifications?: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Authentication Types
@@ -25,9 +27,11 @@ export interface AuthResponse {
 
 export interface RegisterData {
   email: string;
+  username: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  password_confirm: string;
+  first_name: string;
+  last_name: string;
 }
 
 // Artifact Types
