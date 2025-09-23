@@ -3,16 +3,19 @@
 ## Current Specifications
 
 ### System Architecture
-- **Current**: [spec-20250923-system.md](spec-20250923-system.md) - v1.0.0 (Draft)
+- **Current**: [spec-20250923-system.md](spec-20250923-system.md) - v1.0.0 (Current)
   - Comprehensive system architecture for CV & Cover-Letter Auto-Tailor
   - Component topology with Django, React, Redis, PostgreSQL, and Celery
   - Infrastructure design supporting 10,000 concurrent users
+  - Updated with authentication system implementation details
 
 ### API Design
-- **Current**: [spec-20250923-api.md](spec-20250923-api.md) - v1.0.0 (Draft)
-  - REST API specification using Django DRF
-  - Authentication, artifact management, generation, and export endpoints
-  - Database schema and reliability mechanisms
+- **Current**: [spec-20250923-api-v2.md](spec-20250923-api-v2.md) - v2.0.0 (Current)
+  - REST API specification using Django DRF with comprehensive JWT authentication
+  - Updated authentication contracts with user profiles and token blacklisting
+  - Enhanced security, password management, and error handling
+- **Superseded**: [spec-20250923-api.md](spec-20250923-api.md) - v1.0.0 (Superseded)
+  - Initial API specification with basic authentication outline
 
 ### Frontend Application
 - **Current**: [spec-20250923-frontend.md](spec-20250923-frontend.md) - v1.0.0 (Draft)

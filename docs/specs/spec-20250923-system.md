@@ -2,9 +2,9 @@
 
 **Version:** v1.0.0
 **File:** docs/specs/spec-20250923-system.md
-**Status:** Draft
+**Status:** Current
 **PRD:** `prd-20250923.md`
-**Contract Versions:** API v1.0 • Schema v1.0 • Prompt Set v1.0
+**Contract Versions:** API v2.0 • Schema v1.1 • Prompt Set v1.0
 
 ## Overview & Goals
 
@@ -94,17 +94,27 @@ Links to latest PRD: `docs/prds/prd-20250923.md`
 ## Interfaces & Data Contracts
 
 ### Core API Endpoints
-- `POST /api/v1/artifacts` - Upload and process work artifacts
-- `GET /api/v1/artifacts` - List user's artifacts with filtering
-- `POST /api/v1/labels` - Create reusable role labels
-- `POST /api/v1/generate/cv` - Generate targeted CV
-- `POST /api/v1/generate/cover-letter` - Generate cover letter
-- `GET /api/v1/documents/{id}` - Retrieve generated documents
-- `POST /api/v1/export/{id}` - Export to PDF/Docx format
+- **Authentication:**
+  - `POST /api/v1/auth/register/` - User registration with profile
+  - `POST /api/v1/auth/login/` - User login with JWT tokens
+  - `POST /api/v1/auth/logout/` - Secure logout with token blacklisting
+  - `POST /api/v1/auth/token/refresh/` - JWT token refresh
+  - `GET /api/v1/auth/profile/` - Get user profile
+  - `PATCH /api/v1/auth/profile/` - Update user profile
+  - `POST /api/v1/auth/change-password/` - Change password
+  - `POST /api/v1/auth/password-reset/` - Request password reset
+- **Core Features (Planned):**
+  - `POST /api/v1/artifacts` - Upload and process work artifacts
+  - `GET /api/v1/artifacts` - List user's artifacts with filtering
+  - `POST /api/v1/labels` - Create reusable role labels
+  - `POST /api/v1/generate/cv` - Generate targeted CV
+  - `POST /api/v1/generate/cover-letter` - Generate cover letter
+  - `GET /api/v1/documents/{id}` - Retrieve generated documents
+  - `POST /api/v1/export/{id}` - Export to PDF/Docx format
 
 ### Data Schema Versions
-- **API Schema v1.0:** RESTful endpoints with consistent error responses
-- **Database Schema v1.0:** Normalized tables for artifacts, evidence, labels, generations
+- **API Schema v2.0:** RESTful endpoints with JWT authentication and user profiles
+- **Database Schema v1.1:** Extended User model with comprehensive profile fields
 - **LLM Prompt Schema v1.0:** Structured prompts for parsing, matching, generation
 
 ### Error Taxonomy
@@ -121,26 +131,32 @@ Links to latest PRD: `docs/prds/prd-20250923.md`
 ## Data & Storage
 
 ### Primary Tables
-- `users` - User accounts and preferences
-- `artifacts` - Work projects with metadata (title, dates, stack, collaborators)
-- `evidence_links` - URLs proving artifacts with validation status
-- `labels` - Reusable role-theme tags grouping artifacts and skills
-- `skills` - Normalized skill taxonomy (technologies, frameworks, domains)
-- `job_descriptions` - Parsed JD data with requirements and company signals
-- `generated_documents` - CV/cover letter versions with metadata
-- `export_logs` - Track which evidence links were included in exports
+- `auth_user` - Extended Django user model with comprehensive profiles (username, email, first_name, last_name, bio, location, phone, social links, preferences)
+- `token_blacklist_blacklistedtoken` - JWT token blacklist for secure logout
+- `token_blacklist_outstandingtoken` - Outstanding JWT refresh tokens for rotation
+- `artifacts` - Work projects with metadata (title, dates, stack, collaborators) - *Planned*
+- `evidence_links` - URLs proving artifacts with validation status - *Planned*
+- `labels` - Reusable role-theme tags grouping artifacts and skills - *Planned*
+- `skills` - Normalized skill taxonomy (technologies, frameworks, domains) - *Planned*
+- `job_descriptions` - Parsed JD data with requirements and company signals - *Planned*
+- `generated_documents` - CV/cover letter versions with metadata - *Planned*
+- `export_logs` - Track which evidence links were included in exports - *Planned*
 
 ### Indexes and Performance
-- `artifacts.user_id, created_at` - User artifact listing
-- `evidence_links.artifact_id, validation_status` - Evidence retrieval
-- `generated_documents.user_id, job_description_hash` - Document versioning
-- `skills.name` - Skill matching and normalization
+- `auth_user.email` - Email-based login (unique constraint)
+- `auth_user.username` - Username-based lookup (unique constraint)
+- `token_blacklist_blacklistedtoken.token_id` - Token blacklist lookup
+- `artifacts.user_id, created_at` - User artifact listing - *Planned*
+- `evidence_links.artifact_id, validation_status` - Evidence retrieval - *Planned*
+- `generated_documents.user_id, job_description_hash` - Document versioning - *Planned*
+- `skills.name` - Skill matching and normalization - *Planned*
 
 ### Migrations and Retention
-- Initial schema migration: `001_create_base_tables.sql`
-- Evidence link validation: 30-day rolling validation
-- Generated documents: 90-day retention unless user-saved
-- Export logs: 2-year retention for analytics
+- Authentication migration: Extended User model with profile fields (Complete)
+- JWT token blacklist: Redis-backed token management (Complete)
+- Evidence link validation: 30-day rolling validation - *Planned*
+- Generated documents: 90-day retention unless user-saved - *Planned*
+- Export logs: 2-year retention for analytics - *Planned*
 
 ## Reliability & SLIs/SLOs
 
@@ -167,10 +183,11 @@ Links to latest PRD: `docs/prds/prd-20250923.md`
 ## Security & Privacy
 
 ### Authentication & Authorization
-- **Authentication:** JWT tokens with 24-hour expiry
-- **Authorization:** Role-based access (user, admin)
-- **Session Management:** Redis-backed sessions with secure cookies
-- **API Security:** CORS, CSRF protection, input validation
+- **Authentication:** JWT tokens with 15-minute access tokens, 24-hour refresh tokens
+- **Token Management:** Token rotation and blacklisting via Redis for security
+- **Authorization:** Role-based access (user, admin) with Django permissions
+- **Session Management:** JWT-based stateless authentication with Redis token blacklist
+- **API Security:** CORS, CSRF protection, input validation, rate limiting
 
 ### Data Protection
 - **PII Handling:** No PII stored beyond email for account
@@ -259,4 +276,9 @@ Links to latest PRD: `docs/prds/prd-20250923.md`
 
 ## Changelog
 
+- 2025-09-23: Authentication system implementation reflected in specification
+  - Updated authentication endpoints and JWT token management
+  - Added Redis-backed token blacklisting and rotation
+  - Updated database schema to reflect extended User model
+  - Marked planned features for future implementation phases
 - 2025-09-23: Draft created; system architecture defined; component inventory completed; SLOs established; uv dependency management integration added

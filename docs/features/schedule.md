@@ -4,7 +4,8 @@
 
 | ID | Title | Status | Owner | Priority | Target Date | Dependencies |
 |----|-------|--------|-------|----------|-------------|--------------|
-| ft-001 | Artifact Upload System | Draft | Backend Team | P0 | TBD | Auth System |
+| ft-000 | User Authentication & Profile Management | **Done** | Backend Team | P0 | 2025-09-23 | None |
+| ft-001 | Artifact Upload System | Draft | Backend Team | P0 | TBD | ft-000 |
 | ft-002 | CV Generation System | Draft | ML/Backend Team | P0 | TBD | ft-001, LLM Integration |
 | ft-003 | Document Export System | Draft | Backend Team | P0 | TBD | ft-002 |
 
@@ -29,8 +30,9 @@
 
 ### MVP Launch (Phase 1)
 **Target**: TBD
-**Critical Features**: ft-001, ft-002, ft-003
+**Critical Features**: ft-000 ✅, ft-001, ft-002, ft-003
 **Requirements**:
+- ✅ User authentication and profile management
 - Complete artifact upload workflow
 - Basic CV generation functionality
 - PDF export capability
@@ -52,5 +54,8 @@
 
 ## Change Log
 
+- 2025-09-23: Added ft-000 (User Authentication) as completed foundation feature
+- 2025-09-23: Updated dependencies - ft-001 now depends on ft-000 instead of "Auth System"
+- 2025-09-23: Updated MVP requirements to include completed authentication system
 - 2025-09-23: Initial feature schedule created with ft-001, ft-002, ft-003
 - Features created following Stage D of workflow documentation
