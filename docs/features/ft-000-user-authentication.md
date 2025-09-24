@@ -190,11 +190,14 @@ Without proper authentication, users cannot securely store their artifacts or ac
 3. **Account Creation** → Auto-login → Dashboard redirect
 4. **Error Handling** → Clear messages → Form correction
 
-### Authentication Flow
-1. **Login Page** → Credentials → JWT token exchange
-2. **Token Storage** → Automatic refresh → Session persistence
-3. **Protected Routes** → Token validation → Content access
-4. **Logout** → Token blacklisting → Login redirect
+### Authentication Flow (Dashboard-First Approach)
+1. **Default Landing** → Dashboard displayed immediately with login button
+2. **Feature Exploration** → Users can view dashboard and available features
+3. **Protected Action** → Click protected feature → Authentication prompt
+4. **Login Process** → Credentials → JWT token exchange
+5. **Token Storage** → Automatic refresh → Session persistence
+6. **Post-Login** → Return to dashboard with full feature access
+7. **Logout** → Token blacklisting → Return to public dashboard view
 
 ### Profile Management Flow
 1. **Dashboard** → Profile link → Profile view
@@ -203,8 +206,11 @@ Without proper authentication, users cannot securely store their artifacts or ac
 4. **Password Change** → Security validation → Success confirmation
 
 ### Visual Design Changes
+- **Dashboard-First Interface**: Dashboard serves as primary landing page for all users
+- **Progressive Authentication**: Login button prominently displayed in top-right corner
+- **Conditional Navigation**: Different navigation states for authenticated vs unauthenticated users
 - **New Components**: Registration form, login form, profile management interface
-- **Navigation Updates**: User menu with profile and logout options
+- **Protected Feature Indicators**: Clear visual cues for features requiring authentication
 - **Form Design**: Consistent validation styling and error messaging
 - **Responsive Design**: Mobile-friendly authentication forms
 

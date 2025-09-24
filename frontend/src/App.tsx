@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
 import Layout from '@/components/Layout'
+import PublicLayout from '@/components/PublicLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -36,23 +37,52 @@ function App() {
 
   return (
     <Routes>
+      {/* Default route - Dashboard first approach */}
+      <Route path="/" element={<DashboardPage />} />
+
       {/* Public routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={
+        <PublicLayout>
+          <LoginPage />
+        </PublicLayout>
+      } />
+      <Route path="/register" element={
+        <PublicLayout>
+          <RegisterPage />
+        </PublicLayout>
+      } />
 
       {/* Protected routes */}
       <Route
-        path="/*"
+        path="/dashboard"
+        element={<DashboardPage />}
+      />
+      <Route
+        path="/artifacts"
         element={
           <ProtectedRoute>
             <Layout>
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/artifacts" element={<ArtifactsPage />} />
-                <Route path="/generate" element={<GeneratePage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-              </Routes>
+              <ArtifactsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/generate"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <GeneratePage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ProfilePage />
             </Layout>
           </ProtectedRoute>
         }

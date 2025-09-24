@@ -140,6 +140,46 @@ export const useAuth = () => {
 }
 ```
 
+### Dashboard-First Navigation Design
+
+The application implements a dashboard-first approach where users can immediately see the main interface:
+
+#### Navigation Strategy
+- **Default Route**: Root path (`/`) shows dashboard directly to all users
+- **Public Dashboard View**: Dashboard displays with login button in top-right corner
+- **Progressive Authentication**: Users can explore the interface before being prompted to login
+- **Protected Action Gating**: Specific actions require authentication, triggering login modal or redirect
+
+#### User Experience Flow
+1. **Initial Visit**: `www.app.com/` → immediately shows dashboard interface
+2. **Feature Discovery**: User can see dashboard layout and available features
+3. **Protected Action**: Click protected features (Generate CV, Upload Artifacts) → prompt for login
+4. **Authentication**: User clicks login button → modal or redirect to login page
+5. **Post-Authentication**: After login → return to dashboard with full access
+
+#### Implementation Pattern
+```typescript
+// Dashboard-first routing configuration
+<Route path="/" element={<DashboardPage />} />
+<Route path="/login" element={<LoginPage />} />
+
+// Dashboard with conditional authentication
+const DashboardPage = () => {
+  const { isAuthenticated } = useAuth()
+
+  return (
+    <div className="min-h-screen">
+      <nav className="flex justify-between items-center p-4">
+        <Logo />
+        {!isAuthenticated && <LoginButton />}
+        {isAuthenticated && <UserMenu />}
+      </nav>
+      <DashboardContent showProtectedFeatures={isAuthenticated} />
+    </div>
+  )
+}
+```
+
 ### Route Protection System
 
 ```typescript
@@ -200,8 +240,8 @@ export const AppRouter = () => (
         </ProtectedRoute>
       } />
 
-      {/* Default Redirects */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Default Route - Dashboard-First Approach */}
+      <Route path="/" element={<DashboardPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   </BrowserRouter>
@@ -788,11 +828,12 @@ export class AuthErrorBoundary extends React.Component<Props, State> {
 
 ### New Features (v2.0.0)
 1. **Complete Authentication System**: Registration, login, logout, profile management
-2. **JWT Token Management**: Automatic refresh, secure storage, blacklisting support
-3. **Protected Routing**: Route guards and authentication-based navigation
-4. **Enhanced State Management**: Authentication state with persistence
-5. **Form Validation**: Comprehensive validation with user-friendly error messages
-6. **User Profile Management**: Profile viewing, editing, and preference management
+2. **Dashboard-First User Experience**: Dashboard as default route with progressive authentication
+3. **JWT Token Management**: Automatic refresh, secure storage, blacklisting support
+4. **Progressive Authentication**: Users can explore interface before login requirement
+5. **Enhanced State Management**: Authentication state with persistence
+6. **Form Validation**: Comprehensive validation with user-friendly error messages
+7. **User Profile Management**: Profile viewing, editing, and preference management
 7. **Security Enhancements**: Token rotation, automatic logout, error boundaries
 
 ### Component Updates
