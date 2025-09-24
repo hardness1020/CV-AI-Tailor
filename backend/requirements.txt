@@ -23,3 +23,30 @@ httpx>=0.25,<1.0
 aiohttp>=3.8,<4.0
 numpy>=1.24,<2.0
 pandas>=2.0,<3.0
+
+# LangChain and document processing dependencies
+langchain>=0.1,<1.0
+langchain-community>=0.0.20,<1.0
+langchain-openai>=0.0.8,<1.0
+langchain-anthropic>=0.1,<1.0
+unstructured>=0.12,<1.0
+unstructured[pdf]>=0.12,<1.0
+
+# Vector database support
+pgvector>=0.2,<1.0
+
+# Additional document processing libraries
+PyMuPDF>=1.23,<2.0  # For PDF processing
+python-magic>=0.4,<1.0  # For file type detection
+beautifulsoup4>=4.12,<5.0  # For web scraping
+lxml>=4.9,<5.0  # XML/HTML parsing
+
+# Django allauth (missing from original requirements)
+django-allauth>=0.57,<1.0
+
+# Scientific computing for embeddings
+scikit-learn>=1.3,<2.0
+scipy>=1.11,<2.0
+
+# QR code generation
+qrcode>=7.4,<8.0

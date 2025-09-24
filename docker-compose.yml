@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database with pgvector extension
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: cv_tailor_db
+    environment:
+      POSTGRES_DB: cv_tailor
+      POSTGRES_USER: cv_tailor_user
+      POSTGRES_PASSWORD: cv_tailor_dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db_init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cv_tailor_user -d cv_tailor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cv_tailor_network
+
+  # Redis for caching and Celery broker
+  redis:
+    image: redis:7-alpine
+    container_name: cv_tailor_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - cv_tailor_network
+
+  # Backend Django application
+  backend:
+    build: ./backend
+    container_name: cv-tailor-backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DEBUG=True
+      - DB_ENGINE=postgresql
+      - DB_NAME=cv_tailor
+      - DB_USER=cv_tailor_user
+      - DB_PASSWORD=cv_tailor_dev_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,cv-tailor-backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - cv_tailor_network
+    command: >
+      bash -c "
+        uv run python manage.py migrate &&
+        uv run python manage.py collectstatic --noinput &&
+        uv run python manage.py runserver 0.0.0.0:8000
+      "
+
+  # Celery worker for background tasks
+  celery:
+    build: ./backend
+    container_name: cv_tailor_celery
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DEBUG=True
+      - DB_ENGINE=postgresql
+      - DB_NAME=cv_tailor
+      - DB_USER=cv_tailor_user
+      - DB_PASSWORD=cv_tailor_dev_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    networks:
+      - cv_tailor_network
+    command: uv run celery -A cv_tailor worker -l info
+
+  # Frontend React application
+  frontend:
+    build: ./frontend
+    container_name: cv_tailor_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - DOCKER_ENV=true
+    networks:
+      - cv_tailor_network
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  cv_tailor_network:
+    driver: bridge

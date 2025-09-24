@@ -68,6 +68,10 @@ build/
 media/
 uploads/
 
+# Django static files
+staticfiles/
+*/staticfiles/
+
 # Cache
 .cache/
 .pytest_cache/
