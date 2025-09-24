@@ -1,0 +1,16 @@
+{
+  "title": "Test Project",
+  "description": "A sample project for testing artifact creation",
+  "artifact_type": "project",
+  "start_date": "2024-01-01",
+  "end_date": "2024-06-30",
+  "technologies": ["Python", "Django", "React"],
+  "collaborators": ["John Doe", "Jane Smith"],
+  "evidence_links": [
+    {
+      "url": "https://github.com/test/project",
+      "type": "github",
+      "description": "Project repository"
+    }
+  ]
+}
