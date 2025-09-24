@@ -60,9 +60,10 @@ export default function CVGenerationFlow({ onComplete, onClose }: CVGenerationFl
 
   const formData = watch()
 
+  // Load artifacts on component mount
   useEffect(() => {
     loadArtifacts()
-  }, [])
+  }, []) // loadArtifacts is stable from Zustand, so we don't need it in dependencies
 
   // Watch for generation completion
   useEffect(() => {

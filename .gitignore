@@ -78,3 +78,5 @@ htmlcov/
 
 # Claude
 .claude/
+
+idea.md
