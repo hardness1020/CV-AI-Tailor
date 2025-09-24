@@ -7,7 +7,10 @@ import toast from 'react-hot-toast'
 import { FileText, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
+import { GoogleAuthError } from '@/services/googleAuth'
 import { cn } from '@/utils/cn'
+import type { User } from '@/types'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -51,6 +54,23 @@ export default function LoginPage() {
     }
   }
 
+  const handleGoogleSuccess = (user: User, created: boolean) => {
+    toast.success(created ? 'Welcome to CV Tailor!' : 'Welcome back!')
+
+    // Redirect to the page they were trying to access or dashboard
+    const from = location.state?.from?.pathname || '/dashboard'
+    navigate(from, { replace: true })
+  }
+
+  const handleGoogleError = (error: GoogleAuthError) => {
+    if (error.type === 'USER_CANCELLED') {
+      // Don't show error for user cancellation
+      return
+    }
+
+    toast.error(error.message)
+  }
+
   return (
     <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)]">
       <div className="max-w-md w-full space-y-8">
@@ -66,7 +86,28 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <div className="mt-8 space-y-6">
+          {/* Google Sign-In Button */}
+          <GoogleSignInButton
+            mode="signin"
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            disabled={isLoading}
+            className="w-full"
+          />
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+            </div>
+          </div>
+
+          {/* Email/Password Form */}
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -134,18 +175,19 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center">
-            <span className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Sign up
-              </Link>
-            </span>
-          </div>
-        </form>
+            <div className="text-center">
+              <span className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link
+                  to="/register"
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
+                  Sign up
+                </Link>
+              </span>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

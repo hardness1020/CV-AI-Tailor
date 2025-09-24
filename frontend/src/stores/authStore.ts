@@ -8,12 +8,14 @@ interface AuthState {
   refreshToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
+  googleLinked: boolean
 
   // Actions
   setUser: (user: User) => void
   setTokens: (access: string, refresh: string) => void
   clearAuth: () => void
   setLoading: (loading: boolean) => void
+  setGoogleLinked: (linked: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      googleLinked: false,
 
       setUser: (user: User) => {
         set({ user, isAuthenticated: true })
@@ -42,12 +45,17 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           accessToken: null,
           refreshToken: null,
-          isAuthenticated: false
+          isAuthenticated: false,
+          googleLinked: false
         })
       },
 
       setLoading: (loading: boolean) => {
         set({ isLoading: loading })
+      },
+
+      setGoogleLinked: (linked: boolean) => {
+        set({ googleLinked: linked })
       },
     }),
     {
@@ -57,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        googleLinked: state.googleLinked,
       }),
     }
   )

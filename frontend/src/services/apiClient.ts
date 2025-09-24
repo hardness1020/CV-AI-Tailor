@@ -13,7 +13,9 @@ import type {
   GeneratedDocument,
   ExportRequest,
   ExportJob,
-  Label
+  Label,
+  BulkUploadResponse,
+  ArtifactProcessingStatus
 } from '@/types'
 
 class ApiClient {
@@ -178,7 +180,7 @@ class ApiClient {
   async uploadArtifactFiles(artifactId: number, files: File[]): Promise<void> {
     const formData = new FormData()
     files.forEach((file, index) => {
-      formData.append(`file_${index}`, file)
+      formData.append(`files`, file)
     })
 
     await this.client.post(`/v1/artifacts/${artifactId}/upload/`, formData, {
@@ -186,6 +188,58 @@ class ApiClient {
         'Content-Type': 'multipart/form-data',
       },
     })
+  }
+
+  async bulkUploadArtifact(data: {
+    files?: File[]
+    metadata: {
+      title: string
+      description: string
+      artifact_type?: string
+      start_date?: string
+      end_date?: string
+      technologies?: string[]
+      collaborators?: string[]
+      evidence_links?: Array<{
+        url: string
+        link_type: string
+        description?: string
+      }>
+    }
+  }): Promise<BulkUploadResponse> {
+    const formData = new FormData()
+
+    // Add files if provided
+    if (data.files) {
+      data.files.forEach(file => {
+        formData.append('files', file)
+      })
+    }
+
+    // Add metadata as JSON string
+    formData.append('metadata', JSON.stringify(data.metadata))
+
+    const response = await this.client.post('/v1/artifacts/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  }
+
+  async getArtifactProcessingStatus(artifactId: number): Promise<ArtifactProcessingStatus> {
+    const response = await this.client.get(`/v1/artifacts/${artifactId}/status/`)
+    return response.data
+  }
+
+  async getTechnologySuggestions(query?: string): Promise<string[]> {
+    const params = new URLSearchParams()
+    if (query) params.append('q', query)
+
+    const response = await this.client.get<{ suggestions: string[] }>(
+      `/v1/artifacts/suggestions/?${params.toString()}`
+    )
+    return response.data.suggestions
   }
 
   // Generation endpoints
@@ -247,6 +301,68 @@ class ApiClient {
       `/v1/skills/suggest/?q=${encodeURIComponent(query)}`
     )
     return response.data.suggestions
+  }
+
+  // Artifact editing endpoints
+  async addEvidenceLink(artifactId: number, linkData: {
+    url: string;
+    link_type: string;
+    description?: string;
+  }): Promise<{
+    id: number;
+    url: string;
+    link_type: string;
+    description: string;
+    created_at: string;
+  }> {
+    const response = await this.client.post(`/v1/artifacts/${artifactId}/evidence-links/`, linkData)
+    return response.data
+  }
+
+  async updateEvidenceLink(linkId: number, linkData: {
+    url?: string;
+    link_type?: string;
+    description?: string;
+  }): Promise<{
+    id: number;
+    url: string;
+    link_type: string;
+    description: string;
+    updated_at: string;
+  }> {
+    const response = await this.client.put(`/v1/artifacts/evidence-links/${linkId}/`, linkData)
+    return response.data
+  }
+
+  async deleteEvidenceLink(linkId: number): Promise<void> {
+    await this.client.delete(`/v1/artifacts/evidence-links/${linkId}/`)
+  }
+
+  async deleteArtifactFile(fileId: string): Promise<void> {
+    await this.client.delete(`/v1/artifacts/files/${fileId}/`)
+  }
+
+  async bulkUpdateArtifacts(data: {
+    artifact_ids: number[];
+    action: 'add_technologies' | 'remove_technologies' | 'update_type' | 'add_collaborators' | 'remove_collaborators';
+    values: {
+      technologies?: string[];
+      artifact_type?: string;
+      collaborators?: string[];
+    };
+  }): Promise<{
+    results: Array<{
+      id: number;
+      status: 'success' | 'error';
+      updated_fields?: string[];
+      message?: string;
+    }>;
+    total_processed: number;
+    successful: number;
+    failed: number;
+  }> {
+    const response = await this.client.patch('/v1/artifacts/bulk/', data)
+    return response.data
   }
 
   // Additional generation endpoints

@@ -10,4 +10,8 @@ urlpatterns = [
     path('profile/', views.UserProfileView.as_view(), name='profile'),
     path('change-password/', views.change_password, name='change_password'),
     path('password-reset/', views.password_reset_request, name='password_reset_request'),
+    # Google OAuth endpoints
+    path('google/', views.google_auth, name='google_auth'),
+    path('google/link/', views.google_link, name='google_link'),
+    path('google/unlink/', views.google_unlink, name='google_unlink'),
 ]

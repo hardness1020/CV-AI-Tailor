@@ -28,6 +28,11 @@ INSTALLED_APPS = [
     'corsheaders',
     # 'django_ratelimit',
     'django_extensions',
+    # Django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     # Project apps
     'accounts',
     'artifacts',
@@ -43,6 +48,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -174,6 +180,35 @@ ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
 # GitHub API Settings
 GITHUB_TOKEN = config('GITHUB_TOKEN', default='')
 
+# Django-allauth configuration
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'FETCH_USERINFO': True,
+    }
+}
+
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'optional'
+SOCIALACCOUNT_STORE_TOKENS = False
+
+# Google OAuth credentials
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+
 # Logging
 LOGGING = {
     'version': 1,
@@ -194,6 +229,11 @@ LOGGING = {
             'handlers': ['file', 'console'],
             'level': 'INFO',
             'propagate': True,
+        },
+        'google_auth': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }
