@@ -4,74 +4,108 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**VibeFlow-ClaudeCode** is a Claude Code development environment repository configured with a comprehensive documentation-first workflow and development governance system.
+**CV Tailor** is a full-stack application that auto-generates tailored CVs and cover letters from uploaded work artifacts using LLM processing. Built with Django REST API backend and React frontend.
 
-## Development Workflow
+## Architecture
 
-This repository implements a **10-stage docs-first development pipeline** with mandatory stage gating and human review at each step. All development must follow the workflow defined in `rules/00-workflow.md`.
+**Backend (Django):** `/workspace/backend/`
+- **Framework:** Django 4.2+ with Django REST Framework
+- **Database:** SQLite (development) with models for accounts, artifacts, generation, export
+- **LLM Integration:** OpenAI/Anthropic APIs for content generation
+- **Authentication:** JWT tokens with Google OAuth via django-allauth
+- **Background Tasks:** Celery with Redis broker
+- **Document Processing:** PDF/DOCX generation with ReportLab and python-docx
 
-### Required Documentation Pipeline
+**Frontend (React):** `/workspace/frontend/`
+- **Framework:** React 18 with TypeScript and Vite
+- **Routing:** React Router DOM
+- **Styling:** Tailwind CSS with Radix UI components
+- **State Management:** Zustand
+- **Forms:** React Hook Form with Zod validation
+- **HTTP Client:** Axios
 
-1. **Stage A (Initiate)**: Follow the rule (`rule/01-prd.md`) and Create PRD (`docs/prds/prd-YYYYMMDD.md`)
-2. **Stage B (Specify)**: Follow the rule (`rule/02-tech_spec.md`) and Create Tech Specs (`docs/specs/spec-YYYYMMDD-<spec>.md`)
-3. **Stage C (Decide)**: Follow the rule (`rule/03-adr.md`) and Create ADRs (`docs/adrs/adr-YYYYMMDD-<slug>.md`)
-4. **Stage D (Plan)**: Follow the rule (`rule/04-feature.md`) and Create Feature specs (`docs/features/ft-<ID>-<slug>.md`)
-5. **Stage E (Implement)**: Implement with proper branching
-6. **Stage F (Validate)**: Add tests and evaluations
-7. **Stage G (Review)**: Create PR with all doc links
-8. **Stage H (Release Prep)**: Follow the rule (`rule/05-op_note.md`) and Create OP-NOTE (`docs/op-notes/op-<ID>-<slug>.md`)
-9. **Stage I (Deploy)**: Follow OP-NOTE procedures
-10. **Stage J (Close Loop)**: Update indexes and close issues
+## Development Commands
 
+### Backend (Django)
+```bash
+cd backend
+uv run python manage.py runserver 8000    # Start development server
+uv run python manage.py test              # Run tests
+uv run python manage.py migrate           # Apply database migrations
+uv run python manage.py makemigrations    # Create new migrations
+uv run python manage.py shell             # Django shell
+uv run python manage.py collectstatic     # Collect static files
+uv sync                                    # Install/sync dependencies
+```
 
-## File Structure and Naming Conventions
+### Frontend (React)
+```bash
+cd frontend
+npm run dev         # Start development server (port 3000)
+npm run build       # Build for production
+npm run typecheck   # Run TypeScript type checking
+npm run lint        # Run ESLint
+npm run test        # Run Vitest tests
+npm run test:ui     # Run tests with UI
+npm install         # Install dependencies
+```
 
-### Documentation Paths (Mandatory)
-- **PRDs**: `docs/prds/prd-YYYYMMDD.md`
-- **Tech Specs**: `docs/specs/spec-YYYYMMDD-<spec>.md` (spec types: system, api, frontend, llm)
-- **ADRs**: `docs/adrs/adr-YYYYMMDD-<slug>.md`
-- **Features**: `docs/features/ft-<ID>-<slug>.md`
-- **OP-NOTEs**: `docs/op-notes/op-<ID>-<slug>.md`
+### Development Workflow Commands
+Both servers run in development:
+- **Backend:** Django dev server on http://localhost:8000
+- **Frontend:** Vite dev server on http://localhost:3000
+- **CORS:** Frontend allowed origins configured in Django settings
 
-### Branching and Commits
-- **Branches**: `feat/<ID>-<slug>`, `fix/<ID>-<slug>`, `chore/<ID>-<slug>`
-- **Commits**: Conventional Commits format: `<type>(scope): subject (#<ID>)`
-- **PR Titles**: `[<ID>] <title>`
+## Key Application Components
 
-## Key Governance Rules
+### Backend API Structure
+- `/api/v1/auth/` - Authentication endpoints (login, register, OAuth)
+- `/api/v1/artifacts/` - Work artifact management (upload, categorize)
+- `/api/v1/generate/` - CV/cover letter generation via LLM
+- `/api/v1/export/` - Document export (PDF/DOCX)
 
-### Change Control Triggers
-Creating new dated SPEC snapshots is required when changing:
-- **Contracts**: API/GraphQL schemas, DB schemas, model I/O
-- **Topology**: Components, protocols, trust boundaries
-- **Framework roles**: Django/DRF, React, Redis usage patterns
-- **SLOs**: Availability, latency, error rate targets
+### Django Apps
+- **accounts:** Custom user model with Google OAuth integration
+- **artifacts:** Work artifact storage and metadata management
+- **generation:** LLM-based CV/cover letter generation logic
+- **export:** Document generation and formatting
 
-### Documentation Requirements
-- **Architecture sections** must include: comprehensive diagram (frameworks + relationships) + component inventory table
-- **PRDs** focus on business problems, users, metrics - NOT implementation
-- **ADRs** required for non-trivial decisions (dependencies, auth, storage, versioning)
-- **Feature specs** must include acceptance criteria, design diffs, test plans, telemetry
+### Frontend Architecture
+- **Components:** Reusable UI components using Radix primitives
+- **Layout:** Shared layout with protected routes
+- **Utils:** Common utilities (cn for className merging, formatters)
+- **State:** Zustand stores for application state
 
-## Development Environment
+## Environment Configuration
 
-### Container Setup
-- Uses Node.js 20-slim base image with Claude Code pre-installed
-- Development container configured in `.devcontainer/`
-- Workdir: `/workspace`
+### Required Environment Variables (Backend)
+```
+SECRET_KEY=<django-secret-key>
+DEBUG=True
+OPENAI_API_KEY=<openai-api-key>
+ANTHROPIC_API_KEY=<anthropic-api-key>
+GOOGLE_CLIENT_ID=<google-oauth-client-id>
+GOOGLE_CLIENT_SECRET=<google-oauth-client-secret>
+CELERY_BROKER_URL=redis://localhost:6379/0
+```
 
-### Current State
-- **Repository**: Git-initialized, main branch
-- **Language**: No source code files present yet (template repository)
-- **Documentation**: Comprehensive Cursor rules for governance
-- **Build/Test**: No build system configured (will depend on chosen tech stack)
+## Testing Strategy
+- **Backend:** Django's built-in testing with pytest integration
+- **Frontend:** Vitest with React Testing Library and jsdom
+- **Coverage:** Configured for both frontend and backend
 
-## Critical Workflow Enforcement
+## Documentation-First Development
 
-1. **Docs-first mandate**: Generate/update required docs BEFORE code
-2. **Stage gating**: Must stop and wait for human review at each stage
-3. **No auto-advance**: Forbidden to proceed without explicit approval
-4. **Cursor rule compliance**: Each file must follow corresponding cursor rule format
-5. **Traceability**: Use feature IDs (`ft-123`) in all files, branches, PRs, commits
+This repository implements a **10-stage docs-first development pipeline** with mandatory documentation in `/docs/`:
 
-This repository prioritizes documentation quality, change control, and systematic development practices over rapid prototyping.
+### Documentation Structure
+- **PRDs:** `docs/prds/prd-YYYYMMDD.md` - Product requirements
+- **Tech Specs:** `docs/specs/spec-YYYYMMDD-<spec>.md` - Technical specifications
+- **ADRs:** `docs/adrs/adr-YYYYMMDD-<slug>.md` - Architecture decision records
+- **Features:** `docs/features/ft-<ID>-<slug>.md` - Feature specifications
+
+### Governance Rules
+- All major changes require corresponding documentation updates
+- Follow conventional commit format: `<type>(scope): subject (#<ID>)`
+- Branch naming: `feat/<ID>-<slug>`, `fix/<ID>-<slug>`, `chore/<ID>-<slug>`
+- Create dated SPEC snapshots when changing contracts, topology, or framework roles
