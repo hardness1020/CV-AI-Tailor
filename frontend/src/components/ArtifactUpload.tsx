@@ -18,7 +18,6 @@ import {
 import { useArtifactStore } from '@/stores/artifactStore'
 import { apiClient } from '@/services/apiClient'
 import { cn } from '@/utils/cn'
-// Removed unused import
 
 const evidenceLinkSchema = z.object({
   url: z.string().url('Please enter a valid URL'),
@@ -153,8 +152,24 @@ export default function ArtifactUpload({ onUploadComplete, onClose }: ArtifactUp
   const onSubmit = async (data: ArtifactForm) => {
     setIsSubmitting(true)
     try {
+      // Transform form data to match backend API schema
+      const artifactData = {
+        title: data.title,
+        description: data.description,
+        start_date: data.startDate,
+        end_date: data.endDate || undefined,
+        technologies: data.technologies,
+        collaborators: data.collaborators,
+        evidence_links: data.evidenceLinks.map(link => ({
+          url: link.url,
+          link_type: link.type,
+          description: link.description,
+        })),
+        labelIds: data.labelIds,
+      }
+
       // Create artifact
-      const artifact = await apiClient.createArtifact(data)
+      const artifact = await apiClient.createArtifact(artifactData)
 
       // Upload files if any
       if (uploadedFiles.length > 0) {
@@ -164,7 +179,6 @@ export default function ArtifactUpload({ onUploadComplete, onClose }: ArtifactUp
       addArtifact(artifact)
       toast.success('Artifact uploaded successfully!')
       onUploadComplete?.(artifact)
-      onClose?.()
     } catch (error) {
       console.error('Upload error:', error)
       toast.error('Failed to upload artifact. Please try again.')
@@ -174,8 +188,8 @@ export default function ArtifactUpload({ onUploadComplete, onClose }: ArtifactUp
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-lg p-8">
+    <div className="p-6">
+      <div className="bg-white p-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Upload New Artifact</h2>
           <p className="mt-2 text-gray-600">

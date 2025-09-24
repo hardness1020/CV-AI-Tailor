@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Plus,
@@ -30,8 +30,8 @@ const evidenceTypeIcons = {
 }
 
 export default function ArtifactsPage() {
-  const [searchParams] = useSearchParams()
-  const [showUpload, setShowUpload] = useState(searchParams.get('action') === 'upload')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [showUpload, setShowUpload] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'archived'>('all')
@@ -39,12 +39,22 @@ export default function ArtifactsPage() {
   const { selectedArtifacts, toggleSelection, clearSelection } = useArtifactStore()
   const { artifacts, isLoading, loadArtifacts, deleteArtifact, bulkDelete } = useArtifacts()
 
+  // Memoize filters to prevent unnecessary re-renders
+  const filters = useMemo(() => ({
+    search: searchQuery || undefined,
+    status: selectedStatus === 'all' ? undefined : selectedStatus,
+  }), [searchQuery, selectedStatus])
+
+  // Load artifacts on mount and when filters change
   useEffect(() => {
-    loadArtifacts({
-      search: searchQuery || undefined,
-      status: selectedStatus === 'all' ? undefined : selectedStatus,
-    })
-  }, [selectedStatus, searchQuery, loadArtifacts])
+    loadArtifacts(filters)
+  }, [filters]) // loadArtifacts is stable from Zustand, so we don't need it in dependencies
+
+  // Handle URL parameter for showing upload modal
+  useEffect(() => {
+    const shouldShowUpload = searchParams.get('action') === 'upload'
+    setShowUpload(shouldShowUpload)
+  }, [searchParams])
 
   const filteredArtifacts = artifacts.filter(artifact => {
     if (searchQuery) {
@@ -58,9 +68,25 @@ export default function ArtifactsPage() {
     return true
   })
 
-  const handleUploadComplete = () => {
+  const closeUpload = () => {
+    console.log('closeUpload called, current URL:', window.location.href)
+    console.log('current searchParams:', searchParams.toString())
     setShowUpload(false)
-    // Artifacts will be reloaded automatically by the hook
+    // Clean URL parameters using setSearchParams (recommended way per Context7)
+    if (searchParams.get('action')) {
+      console.log('Cleaning action parameter from URL')
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('action')
+      console.log('New params will be:', newParams.toString())
+      setSearchParams(newParams, { replace: true })
+    }
+  }
+
+  const handleUploadComplete = () => {
+    // Refresh the artifacts list to show the new upload and then close the modal
+    loadArtifacts(filters).then(() => {
+      closeUpload()
+    })
   }
 
   const handleBulkDelete = async () => {
@@ -77,17 +103,9 @@ export default function ArtifactsPage() {
     }
   }
 
-  if (showUpload) {
-    return (
-      <ArtifactUpload
-        onUploadComplete={handleUploadComplete}
-        onClose={() => setShowUpload(false)}
-      />
-    )
-  }
-
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -237,7 +255,24 @@ export default function ArtifactsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Upload Modal */}
+      {showUpload && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeUpload}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <ArtifactUpload
+                onUploadComplete={handleUploadComplete}
+                onClose={closeUpload}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -265,7 +300,7 @@ function ArtifactCard({ artifact, isSelected, onToggleSelect }: ArtifactCardProp
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-gray-900 truncate">{artifact.title}</h3>
             <p className="text-sm text-gray-500">
-              {formatDateRange(artifact.startDate, artifact.endDate)}
+              {formatDateRange(artifact.start_date, artifact.end_date)}
             </p>
           </div>
         </div>
@@ -298,10 +333,10 @@ function ArtifactCard({ artifact, isSelected, onToggleSelect }: ArtifactCardProp
       </div>
 
       {/* Evidence Links */}
-      {artifact.evidenceLinks.length > 0 && (
+      {artifact.evidence_links.length > 0 && (
         <div className="flex items-center space-x-2 mb-4">
-          {artifact.evidenceLinks.slice(0, 3).map((link, index) => {
-            const Icon = evidenceTypeIcons[link.type] || ExternalLink
+          {artifact.evidence_links.slice(0, 3).map((link, index) => {
+            const Icon = evidenceTypeIcons[link.link_type] || ExternalLink
             return (
               <div
                 key={index}
@@ -312,9 +347,9 @@ function ArtifactCard({ artifact, isSelected, onToggleSelect }: ArtifactCardProp
               </div>
             )
           })}
-          {artifact.evidenceLinks.length > 3 && (
+          {artifact.evidence_links.length > 3 && (
             <span className="text-xs text-gray-500">
-              +{artifact.evidenceLinks.length - 3} more
+              +{artifact.evidence_links.length - 3} more
             </span>
           )}
         </div>
@@ -365,7 +400,7 @@ function ArtifactListItem({ artifact, isSelected, onToggleSelect, onDelete }: Ar
             <div>
               <h3 className="font-semibold text-gray-900">{artifact.title}</h3>
               <p className="text-sm text-gray-500 mt-1">
-                {formatDateRange(artifact.startDate, artifact.endDate)}
+                {formatDateRange(artifact.start_date, artifact.end_date)}
               </p>
             </div>
 
@@ -405,10 +440,10 @@ function ArtifactListItem({ artifact, isSelected, onToggleSelect, onDelete }: Ar
             </div>
 
             <div className="flex items-center space-x-4 text-sm text-gray-500">
-              {artifact.evidenceLinks.length > 0 && (
+              {artifact.evidence_links.length > 0 && (
                 <span className="flex items-center space-x-1">
                   <ExternalLink className="h-3 w-3" />
-                  <span>{artifact.evidenceLinks.length} link{artifact.evidenceLinks.length !== 1 ? 's' : ''}</span>
+                  <span>{artifact.evidence_links.length} link{artifact.evidence_links.length !== 1 ? 's' : ''}</span>
                 </span>
               )}
               {artifact.collaborators.length > 0 && (
