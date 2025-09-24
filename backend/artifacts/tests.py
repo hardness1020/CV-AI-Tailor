@@ -544,19 +544,44 @@ class ArtifactTaskTests(TestCase):
     @patch('artifacts.tasks.requests.get')
     def test_analyze_github_repository(self, mock_requests):
         """Test GitHub repository analysis"""
-        # Mock GitHub API response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # Mock GitHub API responses
+        repo_response = Mock()
+        repo_response.status_code = 200
+        repo_response.json.return_value = {
             'name': 'test-repo',
             'description': 'Test repository',
             'language': 'Python',
             'stargazers_count': 10,
             'forks_count': 2,
             'created_at': '2024-01-01T00:00:00Z',
-            'topics': ['django', 'python']
+            'topics': ['django', 'python'],
+            'languages_url': 'https://api.github.com/repos/user/test-repo/languages',
+            'default_branch': 'main',
+            'size': 1000,
+            'open_issues_count': 5
         }
-        mock_requests.return_value = mock_response
+
+        lang_response = Mock()
+        lang_response.status_code = 200
+        lang_response.json.return_value = {'Python': 12345, 'JavaScript': 5678}
+
+        commits_response = Mock()
+        commits_response.status_code = 200
+        commits_response.json.return_value = [
+            {
+                'sha': 'abc123def456',
+                'commit': {
+                    'message': 'Initial commit',
+                    'author': {
+                        'name': 'Test Author',
+                        'date': '2024-01-01T00:00:00Z'
+                    }
+                }
+            }
+        ]
+
+        # Configure side effects for different API calls
+        mock_requests.side_effect = [repo_response, lang_response, commits_response]
 
         result = analyze_github_repository('https://github.com/user/test-repo')
 

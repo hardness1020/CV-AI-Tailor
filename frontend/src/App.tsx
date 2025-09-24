@@ -9,6 +9,7 @@ import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
 import DashboardPage from '@/pages/DashboardPage'
 import ArtifactsPage from '@/pages/ArtifactsPage'
+import ArtifactDetailPage from '@/pages/ArtifactDetailPage'
 import GeneratePage from '@/pages/GeneratePage'
 import ProfilePage from '@/pages/ProfilePage'
 
@@ -63,6 +64,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <ArtifactsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/artifacts/:id"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ArtifactDetailPage />
             </Layout>
           </ProtectedRoute>
         }

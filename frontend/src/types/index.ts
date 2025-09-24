@@ -39,24 +39,31 @@ export interface Artifact {
   id: number;
   title: string;
   description: string;
-  startDate: string;
-  endDate?: string;
+  artifact_type: 'project' | 'experience' | 'education' | 'certification' | 'other';
+  start_date: string;
+  end_date?: string;
   technologies: string[];
   collaborators: string[];
-  evidenceLinks: EvidenceLink[];
+  evidence_links: EvidenceLink[];
   labels: Label[];
   status: 'active' | 'archived';
-  createdAt: string;
-  updatedAt: string;
+  extracted_metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EvidenceLink {
   id: number;
   url: string;
-  type: 'github' | 'live_app' | 'paper' | 'video' | 'other';
+  link_type: 'github' | 'live_app' | 'document' | 'website' | 'portfolio' | 'other';
   description: string;
-  validationStatus: 'pending' | 'valid' | 'invalid';
-  lastValidated?: string;
+  file_path?: string;
+  mime_type?: string;
+  is_accessible?: boolean;
+  last_validated?: string;
+  validation_metadata?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Label {
@@ -69,12 +76,33 @@ export interface Label {
 export interface ArtifactCreateData {
   title: string;
   description: string;
-  startDate: string;
-  endDate?: string;
-  technologies: string[];
-  collaborators: string[];
-  evidenceLinks: Omit<EvidenceLink, 'id' | 'validationStatus' | 'lastValidated'>[];
-  labelIds: number[];
+  artifact_type?: 'project' | 'experience' | 'education' | 'certification' | 'other';
+  start_date?: string;
+  end_date?: string;
+  technologies?: string[];
+  collaborators?: string[];
+  evidence_links?: Omit<EvidenceLink, 'id' | 'is_accessible' | 'last_validated' | 'validation_metadata'>[];
+  labelIds?: number[];
+}
+
+export interface BulkUploadResponse {
+  artifact_id: number;
+  status: string;
+  task_id: string;
+  estimated_completion: string;
+  uploaded_files_count: number;
+  evidence_links_count: number;
+}
+
+export interface ArtifactProcessingStatus {
+  artifact_id: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress_percentage: number;
+  error_message?: string;
+  processed_evidence_count: number;
+  total_evidence_count: number;
+  created_at: string;
+  completed_at?: string;
 }
 
 // Generation Types

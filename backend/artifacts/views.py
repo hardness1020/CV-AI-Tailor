@@ -8,8 +8,9 @@ from django.utils import timezone
 from django.db import transaction
 from .models import Artifact, ArtifactProcessingJob, UploadedFile, EvidenceLink
 from .serializers import (
-    ArtifactSerializer, ArtifactCreateSerializer, ArtifactProcessingJobSerializer,
-    UploadedFileSerializer, BulkArtifactUploadSerializer
+    ArtifactSerializer, ArtifactCreateSerializer, ArtifactUpdateSerializer,
+    ArtifactProcessingJobSerializer, UploadedFileSerializer, BulkArtifactUploadSerializer,
+    EvidenceLinkCreateSerializer, EvidenceLinkUpdateSerializer, BulkArtifactUpdateSerializer
 )
 from .tasks import process_artifact_upload
 import uuid
@@ -36,11 +37,15 @@ class ArtifactListCreateView(generics.ListCreateAPIView):
 class ArtifactDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a specific artifact."""
 
-    serializer_class = ArtifactSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Artifact.objects.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return ArtifactUpdateSerializer
+        return ArtifactSerializer
 
 
 @api_view(['POST'])
@@ -171,6 +176,39 @@ def artifact_processing_status(request, artifact_id):
         return Response({
             'error': 'Artifact not found'
         }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def upload_artifact_files(request, artifact_id):
+    """
+    Upload files to a specific artifact.
+    """
+    try:
+        artifact = Artifact.objects.get(id=artifact_id, user=request.user)
+    except Artifact.DoesNotExist:
+        return Response({'error': 'Artifact not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    files = request.FILES.getlist('files')
+    if not files:
+        return Response({'error': 'No files provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    uploaded_files = []
+    for file in files:
+        serializer = UploadedFileSerializer(data={'file': file}, context={'request': request})
+        if serializer.is_valid():
+            uploaded_file = serializer.save()
+            uploaded_files.append({
+                'file_id': uploaded_file.id,
+                'filename': uploaded_file.original_filename,
+                'size': uploaded_file.file_size,
+                'mime_type': uploaded_file.mime_type
+            })
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({'uploaded_files': uploaded_files}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 from .models import Artifact, EvidenceLink, ArtifactProcessingJob, UploadedFile
 
 
@@ -23,6 +24,46 @@ class ArtifactSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'extracted_metadata', 'created_at', 'updated_at')
 
 
+class ArtifactUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Artifact
+        fields = ('id', 'title', 'description', 'artifact_type', 'start_date', 'end_date',
+                 'technologies', 'collaborators', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'extracted_metadata', 'created_at', 'updated_at')
+
+    def validate(self, data):
+        if data.get('end_date') and data.get('start_date'):
+            if data['end_date'] < data['start_date']:
+                raise serializers.ValidationError(
+                    "End date must be after start date"
+                )
+        return data
+
+
+class EvidenceLinkCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EvidenceLink
+        fields = ('url', 'link_type', 'description')
+
+    def validate_url(self, value):
+        # Basic URL validation - could be enhanced with accessibility check
+        if not value.startswith(('http://', 'https://')):
+            raise serializers.ValidationError("URL must start with http:// or https://")
+        return value
+
+
+class EvidenceLinkUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EvidenceLink
+        fields = ('url', 'link_type', 'description')
+
+    def validate_url(self, value):
+        # Basic URL validation - could be enhanced with accessibility check
+        if not value.startswith(('http://', 'https://')):
+            raise serializers.ValidationError("URL must start with http:// or https://")
+        return value
+
+
 class ArtifactCreateSerializer(serializers.ModelSerializer):
     evidence_links = serializers.ListField(
         child=serializers.DictField(),
@@ -32,8 +73,9 @@ class ArtifactCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Artifact
-        fields = ('title', 'description', 'artifact_type', 'start_date', 'end_date',
+        fields = ('id', 'title', 'description', 'artifact_type', 'start_date', 'end_date',
                  'technologies', 'collaborators', 'evidence_links')
+        read_only_fields = ('id',)
 
     def create(self, validated_data):
         evidence_links_data = validated_data.pop('evidence_links', [])
@@ -41,6 +83,9 @@ class ArtifactCreateSerializer(serializers.ModelSerializer):
 
         # Create evidence links
         for link_data in evidence_links_data:
+            # Map 'type' to 'link_type' if present
+            if 'type' in link_data:
+                link_data['link_type'] = link_data.pop('type')
             EvidenceLink.objects.create(artifact=artifact, **link_data)
 
         return artifact
@@ -59,7 +104,7 @@ class UploadedFileSerializer(serializers.ModelSerializer):
         model = UploadedFile
         fields = ('id', 'file', 'original_filename', 'file_size', 'mime_type',
                  'is_processed', 'processing_error', 'created_at')
-        read_only_fields = ('id', 'file_size', 'mime_type', 'is_processed', 'processing_error',
+        read_only_fields = ('id', 'original_filename', 'file_size', 'mime_type', 'is_processed', 'processing_error',
                            'created_at')
 
     def create(self, validated_data):
@@ -118,3 +163,53 @@ class BulkArtifactUploadSerializer(serializers.Serializer):
                     raise serializers.ValidationError("Evidence links must contain 'type' field.")
 
         return metadata
+
+
+class BulkArtifactUpdateSerializer(serializers.Serializer):
+    """Serializer for bulk artifact updates."""
+
+    artifact_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=True,
+        min_length=1,
+        max_length=100
+    )
+
+    action = serializers.ChoiceField(
+        choices=[
+            ('add_technologies', 'Add Technologies'),
+            ('remove_technologies', 'Remove Technologies'),
+            ('update_type', 'Update Type'),
+            ('add_collaborators', 'Add Collaborators'),
+            ('remove_collaborators', 'Remove Collaborators'),
+        ],
+        required=True
+    )
+
+    values = serializers.DictField(required=True)
+
+    def validate(self, data):
+        action = data['action']
+        values = data['values']
+
+        if action in ['add_technologies', 'remove_technologies']:
+            if 'technologies' not in values or not isinstance(values['technologies'], list):
+                raise serializers.ValidationError(
+                    "Technologies action requires 'technologies' list in values"
+                )
+        elif action == 'update_type':
+            if 'artifact_type' not in values:
+                raise serializers.ValidationError(
+                    "Update type action requires 'artifact_type' in values"
+                )
+            # Validate artifact type choice
+            valid_types = [choice[0] for choice in Artifact.ARTIFACT_TYPES]
+            if values['artifact_type'] not in valid_types:
+                raise serializers.ValidationError(f"Invalid artifact type: {values['artifact_type']}")
+        elif action in ['add_collaborators', 'remove_collaborators']:
+            if 'collaborators' not in values or not isinstance(values['collaborators'], list):
+                raise serializers.ValidationError(
+                    "Collaborators action requires 'collaborators' list in values"
+                )
+
+        return data

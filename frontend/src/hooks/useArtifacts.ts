@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { useArtifactStore } from '@/stores/artifactStore'
 import { apiClient } from '@/services/apiClient'
@@ -17,24 +17,10 @@ export function useArtifacts() {
     deleteArtifact,
     setLoading,
     setError,
+    loadArtifacts,
   } = useArtifactStore()
 
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
-
-  const loadArtifacts = async (customFilters?: ArtifactFilters) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await apiClient.getArtifacts(customFilters || filters)
-      setArtifacts(response.results)
-    } catch (error) {
-      console.error('Failed to load artifacts:', error)
-      setError('Failed to load artifacts')
-      toast.error('Failed to load artifacts')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const createArtifact = async (data: ArtifactCreateData, files?: File[]) => {
     setLoading(true)
@@ -143,10 +129,7 @@ export function useArtifacts() {
     }
   }
 
-  // Auto-load artifacts on mount
-  useEffect(() => {
-    loadArtifacts()
-  }, [filters])
+  // Note: loadArtifacts is called explicitly by components when needed
 
   return {
     artifacts,

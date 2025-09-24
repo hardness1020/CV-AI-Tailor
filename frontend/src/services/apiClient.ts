@@ -71,11 +71,7 @@ class ApiClient {
           }
         }
 
-        // Show error toast for user-facing errors
-        if (error.response?.status >= 400 && error.response?.status < 500) {
-          const message = error.response?.data?.message || 'An error occurred'
-          toast.error(message)
-        }
+        // Don't automatically show error toasts - let components handle error display
 
         return Promise.reject(error)
       }

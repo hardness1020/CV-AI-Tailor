@@ -1,32 +1,73 @@
 # Feature — 001 Artifact Upload System
 
-**File:** docs/features/ft-001-artifact-upload.md
+**Feature ID:** ft-001
+**Title:** Artifact Upload & Management System
+**Status:** In Progress - Backend Implemented, Frontend Integration Needed
+**Priority:** P1 (Core Functionality)
 **Owner:** Backend Team
-**TECH-SPECs:** `spec-20250923-api.md`, `spec-20250923-frontend.md`, `spec-20250923-system.md`
+**Target Date:** 2025-09-24
+**Sprint:** Core Features Sprint 2
+
+## Overview
+
+Implement comprehensive artifact upload and management system enabling users to upload professional artifacts (projects, documents, code repositories) with automatic metadata extraction, evidence link validation, and async processing capabilities.
+
+## Links
+- **PRD**: [prd-20250923.md](../prds/prd-20250923.md)
+- **SPEC**: [spec-20250923-api-v2.md](../specs/spec-20250923-api-v2.md)
+- **Frontend SPEC**: [spec-20250923-frontend-v2.md](../specs/spec-20250923-frontend-v2.md)
+
+## Implementation Status
+
+### Backend ✅ Completed
+- ✅ Artifact models (Artifact, EvidenceLink, ArtifactProcessingJob, UploadedFile)
+- ✅ API endpoints for CRUD operations
+- ✅ Bulk upload with file handling
+- ✅ Async processing with Celery tasks
+- ✅ PDF metadata extraction
+- ✅ GitHub repository analysis
+- ✅ Evidence link validation
+- ✅ Comprehensive serializers
+
+### Frontend ⚠️ Needs Integration
+- ⚠️ API client methods exist but need validation
+- ⚠️ Upload UI components need implementation
+- ⚠️ File handling and progress tracking needed
+- ⚠️ Integration with artifact store needed
+
+### Testing ❌ Missing
+- ❌ Backend unit tests need implementation
+- ❌ Frontend integration tests needed
+- ❌ End-to-end upload workflow testing
 
 ## Acceptance Criteria
 
 ### Core Upload Functionality
-- [ ] User can upload artifacts via drag-and-drop interface with visual feedback
-- [ ] Support for multiple file types: PDF documents, GitHub repository links, live application URLs
-- [ ] Upload progress indicator shows real-time status (0-100%)
-- [ ] File size validation (max 10MB per file) with clear error messages
-- [ ] Evidence link validation ensures URLs are accessible (200 response)
-- [ ] Bulk upload supports up to 10 files simultaneously
+- ✅ Backend supports multiple file upload via bulk_upload_artifacts endpoint
+- ✅ File size validation (max 10MB per file) implemented in serializer
+- ✅ Support for PDF, DOC, DOCX file types with validation
+- ✅ Evidence link validation with URL health checking
+- ✅ Bulk upload supports up to 10 files simultaneously
+- ⚠️ Frontend drag-and-drop interface needs implementation
+- ⚠️ Upload progress indicator needs real-time status integration
 
 ### Metadata Extraction
-- [ ] Automatic extraction of project metadata from PDFs (title, dates, technologies)
-- [ ] GitHub repository analysis extracts: README content, primary language, commit history, collaborators
-- [ ] Manual metadata form allows user to add/edit: title, description, start/end dates, technologies, collaborators
-- [ ] Technology auto-suggestion based on common skills taxonomy (React, Python, AWS, etc.)
-- [ ] Artifact categorization by type: project, publication, presentation, certification
+- ✅ PDF metadata extraction implemented (title, author, pages, creation date)
+- ✅ GitHub repository analysis extracts: languages, stars, forks, commits, topics
+- ✅ Manual metadata form structure defined in serializers
+- ✅ Technology suggestions API endpoint implemented with common taxonomy
+- ✅ Artifact categorization by type: project, publication, presentation, certification
+- ⚠️ Frontend forms need integration with suggestion API
+- ⚠️ Real-time metadata preview needs implementation
 
 ### Validation and Processing
-- [ ] Evidence link health check validates URLs return 200 status
-- [ ] Duplicate detection prevents re-uploading same artifact (based on title + URL hash)
-- [ ] Async processing queue handles heavy operations (PDF parsing, GitHub API calls)
-- [ ] Processing status updates available via API polling (pending → processing → completed → failed)
-- [ ] Error handling with specific messages: "URL unreachable", "File too large", "Unsupported format"
+- ✅ Evidence link health check validates URLs return 200 status
+- ✅ Async processing queue handles heavy operations (PDF parsing, GitHub API calls)
+- ✅ Processing status updates available via artifact_processing_status endpoint
+- ✅ Comprehensive error handling with specific messages implemented
+- ✅ File validation prevents unauthorized types and oversized uploads
+- ❌ Duplicate detection not yet implemented
+- ⚠️ Frontend polling for processing status needs implementation
 
 ### User Experience
 - [ ] Upload interface works on mobile devices (responsive design)
@@ -37,39 +78,83 @@
 
 ## Design Changes
 
-### API Endpoints
+## Current Implementation Issues Identified
+
+### Backend Issues to Fix
+1. **Missing serializer import**: `bulk_upload_artifacts` view references undefined `BulkArtifactUploadSerializer`
+2. **Celery tasks not properly configured**: `process_artifact_upload.delay()` may fail if Celery not running
+3. **File upload endpoint mismatch**: Frontend expects different URL structure than implemented
+4. **Authentication integration**: API client upload methods need proper token handling
+
+### Frontend Issues to Fix
+1. **API client endpoint mismatch**: `uploadArtifactFiles` uses wrong URL pattern
+2. **Missing bulk upload method**: No frontend method for `bulk_upload_artifacts` endpoint
+3. **File processing status polling**: No implementation for tracking upload progress
+4. **Artifact store integration**: Store needs proper API integration
+
+### Integration Issues
+1. **URL pattern mismatch**: Frontend `/v1/artifacts/` vs Backend `/api/v1/artifacts/`
+2. **File handling**: Multipart form data handling needs verification
+3. **Error handling**: Frontend error responses need proper mapping
+4. **Authentication**: Token refresh during long uploads needs handling
+
+## API Endpoints (Current Implementation)
+
+### Artifact CRUD Operations
+```typescript
+GET /api/v1/artifacts/                    // List user artifacts
+POST /api/v1/artifacts/                   // Create new artifact
+GET /api/v1/artifacts/{id}/               // Get specific artifact
+PATCH /api/v1/artifacts/{id}/             // Update artifact
+DELETE /api/v1/artifacts/{id}/            // Delete artifact
 ```
-POST /api/v1/artifacts
+
+### File Upload Operations
+```typescript
+POST /api/v1/artifacts/upload/            // Bulk upload with files + metadata
+POST /api/v1/artifacts/upload-file/       // Single file upload
+GET /api/v1/artifacts/{id}/status/        // Processing status
+GET /api/v1/artifacts/suggestions/        // Technology suggestions
+```
+
+### Request/Response Formats
+```typescript
+// Bulk Upload Request
+POST /api/v1/artifacts/upload/
 Content-Type: multipart/form-data
 Body:
-  - files: File[] (optional)
-  - metadata: {
+  - files: File[]
+  - metadata: JSON{
       title: string,
       description: string,
-      start_date: date,
-      end_date: date,
-      technologies: string[],
-      collaborators: string[],
-      evidence_links: [
-        {url: string, type: enum, description: string}
-      ]
+      artifact_type?: "project" | "publication" | "presentation" | "certification",
+      start_date?: date,
+      end_date?: date,
+      technologies?: string[],
+      collaborators?: string[],
+      evidence_links?: {url: string, type: string, description?: string}[]
     }
 
 Response: 202 {
-  artifact_id: string,
+  artifact_id: number,
   status: "processing",
   task_id: string,
-  estimated_completion: timestamp
+  estimated_completion: timestamp,
+  uploaded_files_count: number,
+  evidence_links_count: number
 }
 
-GET /api/v1/artifacts/{id}/status
+// Status Check
+GET /api/v1/artifacts/{id}/status/
 Response: 200 {
-  artifact_id: string,
+  artifact_id: number,
   status: "pending" | "processing" | "completed" | "failed",
   progress_percentage: number,
-  error_message: string,
+  error_message?: string,
   processed_evidence_count: number,
-  total_evidence_count: number
+  total_evidence_count: number,
+  created_at: timestamp,
+  completed_at?: timestamp
 }
 ```
 

@@ -129,7 +129,7 @@ def extract_pdf_metadata(file_path):
                 return extracted
     except Exception as e:
         logger.error(f"Error extracting PDF metadata from {file_path}: {e}")
-        return {}
+    return {}
 
 
 def validate_evidence_link(evidence_link):

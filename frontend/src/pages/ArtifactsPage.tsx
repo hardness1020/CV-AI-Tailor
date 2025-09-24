@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Plus,
   Search,
@@ -12,11 +12,14 @@ import {
   Trash2,
   Github,
   Globe,
-  Video
+  Video,
+  Settings
 } from 'lucide-react'
 import { useArtifactStore } from '@/stores/artifactStore'
 import { useArtifacts } from '@/hooks/useArtifacts'
 import ArtifactUpload from '@/components/ArtifactUpload'
+import { BulkEditDialog } from '@/components/BulkEditDialog'
+import { Button } from '@/components/ui/Button'
 import { formatDateRange } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
 import type { Artifact } from '@/types'
@@ -31,13 +34,15 @@ const evidenceTypeIcons = {
 
 export default function ArtifactsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [showUpload, setShowUpload] = useState(false)
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'archived'>('all')
 
-  const { selectedArtifacts, toggleSelection, clearSelection } = useArtifactStore()
-  const { artifacts, isLoading, loadArtifacts, deleteArtifact, bulkDelete } = useArtifacts()
+  const { selectedArtifacts, toggleSelection, clearSelection, artifacts } = useArtifactStore()
+  const { isLoading, loadArtifacts, deleteArtifact, bulkDelete } = useArtifacts()
 
   // Memoize filters to prevent unnecessary re-renders
   const filters = useMemo(() => ({
@@ -101,6 +106,16 @@ export default function ArtifactsPage() {
     if (window.confirm('Are you sure you want to delete this artifact?')) {
       await deleteArtifact(id)
     }
+  }
+
+  const handleBulkEditSuccess = () => {
+    setShowBulkEdit(false)
+    clearSelection()
+    loadArtifacts(filters)
+  }
+
+  const getSelectedArtifactsData = () => {
+    return artifacts.filter(artifact => selectedArtifacts.includes(artifact.id))
   }
 
   return (
@@ -193,6 +208,13 @@ export default function ArtifactsPage() {
                   Clear selection
                 </button>
                 <button
+                  onClick={() => setShowBulkEdit(true)}
+                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 mr-2"
+                >
+                  <Settings className="h-3 w-3 inline mr-1" />
+                  Bulk Edit
+                </button>
+                <button
                   onClick={handleBulkDelete}
                   className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                 >
@@ -219,6 +241,7 @@ export default function ArtifactsPage() {
                 isSelected={selectedArtifacts.includes(artifact.id)}
                 onToggleSelect={() => toggleSelection(artifact.id)}
                 onDelete={() => handleDelete(artifact.id)}
+                onEdit={() => navigate(`/artifacts/${artifact.id}`)}
               />
             ))}
           </div>
@@ -231,6 +254,7 @@ export default function ArtifactsPage() {
                 isSelected={selectedArtifacts.includes(artifact.id)}
                 onToggleSelect={() => toggleSelection(artifact.id)}
                 onDelete={() => handleDelete(artifact.id)}
+                onEdit={() => navigate(`/artifacts/${artifact.id}`)}
               />
             ))}
           </div>
@@ -257,6 +281,14 @@ export default function ArtifactsPage() {
       )}
       </div>
 
+      {/* Bulk Edit Dialog */}
+      <BulkEditDialog
+        selectedArtifacts={getSelectedArtifactsData()}
+        isOpen={showBulkEdit}
+        onClose={() => setShowBulkEdit(false)}
+        onSuccess={handleBulkEditSuccess}
+      />
+
       {/* Upload Modal */}
       {showUpload && (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -281,9 +313,10 @@ interface ArtifactCardProps {
   isSelected: boolean
   onToggleSelect: () => void
   onDelete: () => void
+  onEdit: () => void
 }
 
-function ArtifactCard({ artifact, isSelected, onToggleSelect }: ArtifactCardProps) {
+function ArtifactCard({ artifact, isSelected, onToggleSelect, onEdit }: ArtifactCardProps) {
   return (
     <div
       className={cn(
@@ -304,13 +337,25 @@ function ArtifactCard({ artifact, isSelected, onToggleSelect }: ArtifactCardProp
             </p>
           </div>
         </div>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onToggleSelect}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit()
+            }}
+            className="p-1 text-gray-400 hover:text-blue-600 rounded"
+            title="Edit artifact"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onToggleSelect}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       </div>
 
       <p className="text-sm text-gray-600 mb-4 line-clamp-3">{artifact.description}</p>
@@ -371,9 +416,10 @@ interface ArtifactListItemProps {
   isSelected: boolean
   onToggleSelect: () => void
   onDelete: () => void
+  onEdit: () => void
 }
 
-function ArtifactListItem({ artifact, isSelected, onToggleSelect, onDelete }: ArtifactListItemProps) {
+function ArtifactListItem({ artifact, isSelected, onToggleSelect, onDelete, onEdit }: ArtifactListItemProps) {
   return (
     <div
       className={cn(
@@ -406,9 +452,12 @@ function ArtifactListItem({ artifact, isSelected, onToggleSelect, onDelete }: Ar
 
             <div className="flex items-center space-x-2">
               <button
-                className="p-1 text-gray-400 hover:text-gray-600"
+                className="p-1 text-gray-400 hover:text-blue-600"
                 title="Edit artifact"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit()
+                }}
               >
                 <Edit className="h-4 w-4" />
               </button>
