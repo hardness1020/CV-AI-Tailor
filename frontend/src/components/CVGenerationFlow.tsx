@@ -259,7 +259,7 @@ export default function CVGenerationFlow({ onComplete, onClose }: CVGenerationFl
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-medium text-gray-900">{artifact.title}</h3>
+                  <h3 className="font-medium text-gray-900 truncate">{artifact.title}</h3>
                   <span className={cn(
                     'px-2 py-1 text-xs rounded-full',
                     artifact.matchScore >= 90 ? 'bg-green-100 text-green-800' :

@@ -175,24 +175,25 @@ export default function ArtifactDetailPage() {
   return (
     <div key={artifact?.id} className="max-w-6xl mx-auto py-8 px-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-between min-w-0 gap-4">
+        <div className="flex items-center space-x-4 flex-1 min-w-0">
           <Button
             variant="outline"
             onClick={() => navigate('/artifacts')}
+            className="flex-shrink-0"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{artifact.title}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 break-words">{artifact.title}</h1>
             <p className="text-gray-600">
               {artifact.artifact_type} • {formatDateRange(artifact.start_date, artifact.end_date)}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-shrink-0">
           <Button
             variant="outline"
             onClick={() => setShowEditModal(true)}
@@ -216,7 +217,7 @@ export default function ArtifactDetailPage() {
           {/* Description */}
           <Card className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{artifact.description}</p>
+            <p className="text-gray-700 whitespace-pre-wrap break-words">{artifact.description}</p>
           </Card>
 
           {/* Evidence Links Manager */}

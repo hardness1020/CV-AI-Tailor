@@ -325,9 +325,9 @@ function ArtifactCard({ artifact, isSelected, onToggleSelect, onEdit }: Artifact
       )}
       onClick={onToggleSelect}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
+      <div className="flex items-start justify-between mb-4 min-w-0">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
             <FileText className="h-5 w-5 text-blue-600" />
           </div>
           <div className="flex-1 min-w-0">
@@ -337,7 +337,7 @@ function ArtifactCard({ artifact, isSelected, onToggleSelect, onEdit }: Artifact
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -444,7 +444,7 @@ function ArtifactListItem({ artifact, isSelected, onToggleSelect, onDelete, onEd
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-gray-900">{artifact.title}</h3>
+              <h3 className="font-semibold text-gray-900 truncate">{artifact.title}</h3>
               <p className="text-sm text-gray-500 mt-1">
                 {formatDateRange(artifact.start_date, artifact.end_date)}
               </p>

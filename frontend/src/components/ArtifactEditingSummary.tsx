@@ -61,7 +61,7 @@ export const ArtifactEditingSummary: React.FC = () => {
                 <Icon className="h-4 w-4 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-medium text-gray-900 mb-1">{feature.title}</h4>
+                <h4 className="font-medium text-gray-900 mb-1 truncate">{feature.title}</h4>
                 <p className="text-sm text-gray-600">{feature.description}</p>
                 <div className="flex items-center space-x-1 mt-2">
                   <Check className="h-3 w-3 text-green-500" />

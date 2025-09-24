@@ -150,7 +150,7 @@ export const ArtifactEditForm: React.FC<ArtifactEditFormProps> = ({
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-gray-900 break-words">
           Edit Artifact: {artifact.title}
         </h2>
         <p className="text-gray-600 mt-1">
