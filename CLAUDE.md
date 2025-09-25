@@ -50,8 +50,6 @@ docker-compose down
 ```bash
 # One-time setup for PostgreSQL migration
 cp backend/.env.example backend/.env         # Configure environment
-python test_migration.py                     # Automated migration test
-# OR manual steps:
 docker-compose up -d db redis                # Start PostgreSQL
 cd backend && python manage.py setup_pgvector --test-vectors
 python manage.py migrate_to_postgresql       # Migrate data
@@ -196,7 +194,7 @@ For testing login functionality:
 - Check container logs: `docker-compose logs backend frontend`
 
 ### Database Migration Issues
-- Use automated migration test: `python test_migration.py`
+- Follow manual migration steps in backend/README.md
 - Check PostgreSQL connection: `docker-compose exec db psql -U cv_tailor_user -d cv_tailor`
 - Verify pgvector extension: `python manage.py setup_pgvector --test-vectors`
 

@@ -20,9 +20,9 @@ RUN apt-get update && apt-get install -y \
 # Install uv for fast Python package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Install Python dependencies with uv
-COPY requirements.txt /app/
-RUN uv pip install --system --no-cache -r requirements.txt
+# Copy pyproject.toml and install Python dependencies with uv
+COPY pyproject.toml /app/
+RUN uv sync --no-dev
 
 # Copy project files
 COPY . /app/
@@ -40,4 +40,4 @@ RUN chmod +x /app/manage.py
 EXPOSE 8000
 
 # Default command (overridden in docker-compose.yml)
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["uv", "run", "--frozen", "python", "manage.py", "runserver", "0.0.0.0:8000"]

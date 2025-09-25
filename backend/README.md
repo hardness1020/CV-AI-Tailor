@@ -29,7 +29,7 @@ Django REST API backend for CV Tailor - an AI-powered CV and cover letter genera
 # Start PostgreSQL and Redis services
 docker-compose up -d db redis
 
-# Install Python dependencies
+# Install Python dependencies (uv automatically reads pyproject.toml)
 uv sync
 
 # Setup environment
@@ -62,10 +62,7 @@ For new installations, the system uses PostgreSQL by default with pgvector exten
 If you have existing SQLite data:
 
 ```bash
-# Automated migration (recommended)
-python test_migration.py
-
-# Or manual migration steps:
+# Manual migration steps:
 cp .env.example .env                              # Configure PostgreSQL
 docker-compose up -d db redis                     # Start services
 uv run python manage.py setup_pgvector --test-vectors

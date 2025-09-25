@@ -63,9 +63,9 @@ services:
       - cv_tailor_network
     command: >
       bash -c "
-        uv run python manage.py migrate &&
-        uv run python manage.py collectstatic --noinput &&
-        uv run python manage.py runserver 0.0.0.0:8000
+        uv run --frozen python manage.py migrate &&
+        uv run --frozen python manage.py collectstatic --noinput &&
+        uv run --frozen python manage.py runserver 0.0.0.0:8000
       "
 
   # Celery worker for background tasks
@@ -89,7 +89,7 @@ services:
       - ./backend:/app
     networks:
       - cv_tailor_network
-    command: uv run celery -A cv_tailor worker -l info
+    command: uv run --frozen celery -A cv_tailor worker -l info
 
   # Frontend React application
   frontend:
