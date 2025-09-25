@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'artifacts',
     'generation',
     'export',
+    # Enhanced LLM services
+    'llm_services',
 ]
 
 MIDDLEWARE = [
@@ -191,9 +193,74 @@ CELERY_RESULT_SERIALIZER = 'json'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
-# AI/LLM Settings
+# Enhanced AI/LLM Settings (2025)
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
+
+# Model Selection Strategy
+MODEL_SELECTION_STRATEGY = config('MODEL_SELECTION_STRATEGY', default='balanced')
+TRACK_MODEL_PERFORMANCE = config('TRACK_MODEL_PERFORMANCE', default=True, cast=bool)
+OPTIMIZE_FOR_COST = config('OPTIMIZE_FOR_COST', default=False, cast=bool)
+OPTIMIZE_FOR_QUALITY = config('OPTIMIZE_FOR_QUALITY', default=False, cast=bool)
+
+# Model Strategy Configurations
+MODEL_STRATEGIES = {
+    'cost_optimized': {
+        'job_parsing_model': 'gpt-4o-mini',
+        'cv_generation_model': 'gpt-4o',
+        'embedding_model': 'text-embedding-3-small',
+        'embedding_dimensions': 1536,
+        'max_cost_per_generation': 0.05,  # $0.05 per CV
+        'fallback_model': 'gpt-4o-mini'
+    },
+    'balanced': {
+        'job_parsing_model': 'gpt-4o',
+        'cv_generation_model': 'gpt-4o',
+        'embedding_model': 'text-embedding-3-small',
+        'embedding_dimensions': 1536,
+        'max_cost_per_generation': 0.15,  # $0.15 per CV
+        'fallback_model': 'claude-sonnet-4-20250514'
+    },
+    'quality_optimized': {
+        'job_parsing_model': 'claude-sonnet-4-20250514',
+        'cv_generation_model': 'claude-opus-4-1-20250805',
+        'embedding_model': 'text-embedding-3-large',
+        'embedding_dimensions': 3072,
+        'max_cost_per_generation': 0.50,  # $0.50 per CV
+        'fallback_model': 'claude-sonnet-4-20250514'
+    },
+    'experimental': {
+        'job_parsing_model': 'claude-opus-4-1-20250805',
+        'cv_generation_model': 'claude-opus-4-1-20250805',
+        'embedding_model': 'text-embedding-3-large',
+        'embedding_dimensions': 3072,
+        'max_cost_per_generation': 1.00,  # $1.00 per CV
+        'fallback_model': 'gpt-4o'
+    }
+}
+
+# Model Performance & Cost Budgets
+MODEL_BUDGETS = {
+    'daily_budget_usd': config('DAILY_LLM_BUDGET', default=50.0, cast=float),
+    'monthly_budget_usd': config('MONTHLY_LLM_BUDGET', default=1000.0, cast=float),
+    'max_cost_per_user_daily': config('MAX_USER_DAILY_COST', default=5.0, cast=float),
+    'cost_alert_threshold': 0.8  # Alert at 80% of budget
+}
+
+# LangChain Document Processing
+LANGCHAIN_SETTINGS = {
+    'chunk_size': config('LANGCHAIN_CHUNK_SIZE', default=1000, cast=int),
+    'chunk_overlap': config('LANGCHAIN_CHUNK_OVERLAP', default=200, cast=int),
+    'max_chunks_per_document': config('MAX_CHUNKS_PER_DOCUMENT', default=50, cast=int),
+    'semantic_chunking_threshold': config('SEMANTIC_CHUNKING_THRESHOLD', default=0.8, cast=float)
+}
+
+# Circuit Breaker Settings
+CIRCUIT_BREAKER_SETTINGS = {
+    'failure_threshold': 5,
+    'timeout_duration': 30,  # seconds
+    'retry_attempts': 3
+}
 
 # GitHub API Settings
 GITHUB_TOKEN = config('GITHUB_TOKEN', default='')

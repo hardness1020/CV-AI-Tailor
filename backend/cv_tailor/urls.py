@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/v1/artifacts/', include('artifacts.urls')),
     path('api/v1/generate/', include('generation.urls')),
     path('api/v1/export/', include('export.urls')),
+    path('api/v1/llm/', include('llm_services.urls')),
 ]
 
 if settings.DEBUG:
