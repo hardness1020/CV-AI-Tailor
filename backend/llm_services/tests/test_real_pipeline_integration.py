@@ -186,9 +186,9 @@ class RealPipelineIntegrationTestCase(TransactionTestCase):
             for r in self.test_results
         )
 
-        # Safety checks
-        max_total_cost = 0.05  # 5 cents max for entire pipeline
-        max_total_tokens = 1000  # 1000 tokens max
+        # Safety checks - Realistic limits for full CV generation pipeline
+        max_total_cost = 0.25  # 25 cents max for entire pipeline (more realistic)
+        max_total_tokens = 25000  # 25k tokens max (realistic for job parsing + CV generation)
 
         self.assertLess(total_cost, max_total_cost,
                        f"Pipeline cost ${total_cost:.6f} exceeds limit ${max_total_cost}")

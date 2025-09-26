@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TokenBudget:
     """Token usage budget for test safety"""
-    max_tokens_per_test: int = 200
-    max_tokens_total: int = 2000
-    max_cost_per_test_usd: float = 0.01  # 1 cent per test
-    max_cost_total_usd: float = 0.50     # 50 cents total
+    max_tokens_per_test: int = 30000     # Realistic for CV generation
+    max_tokens_total: int = 50000        # Total budget for all tests
+    max_cost_per_test_usd: float = 0.30  # 30 cents per test (realistic for CV generation)
+    max_cost_total_usd: float = 1.00     # $1 total budget
     current_usage: int = field(default=0)
     current_cost: float = field(default=0.0)
 
