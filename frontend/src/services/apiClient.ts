@@ -15,7 +15,15 @@ import type {
   ExportJob,
   Label,
   BulkUploadResponse,
-  ArtifactProcessingStatus
+  ArtifactProcessingStatus,
+  LLMModelStats,
+  LLMSystemHealth,
+  LLMPerformanceMetric,
+  LLMCostTracking,
+  JobDescriptionEmbedding,
+  EnhancedArtifact,
+  GenerationAnalytics,
+  ExportAnalytics
 } from '@/types'
 
 class ApiClient {
@@ -254,7 +262,7 @@ class ApiClient {
 
   async generateCoverLetter(request: Omit<CVGenerationRequest, 'templateId'>): Promise<{ generation_id: string }> {
     const response = await this.client.post<{ generation_id: string }>(
-      '/v1/generate/cover-letter',
+      '/v1/generate/cover-letter/',
       request
     )
     return response.data
@@ -294,7 +302,7 @@ class ApiClient {
 
   async suggestSkills(query: string): Promise<string[]> {
     const response = await this.client.get<{ suggestions: string[] }>(
-      `/v1/skills/suggest/?q=${encodeURIComponent(query)}`
+      `/v1/artifacts/suggestions/?q=${encodeURIComponent(query)}`
     )
     return response.data.suggestions
   }
@@ -387,6 +395,67 @@ class ApiClient {
 
   async getExportTemplates(): Promise<any[]> {
     const response = await this.client.get<any[]>('/v1/export/templates/')
+    return response.data
+  }
+
+  async getExportAnalytics(): Promise<ExportAnalytics> {
+    const response = await this.client.get<ExportAnalytics>('/v1/export/analytics/')
+    return response.data
+  }
+
+  // Analytics endpoints
+  async getGenerationAnalytics(): Promise<GenerationAnalytics> {
+    const response = await this.client.get<GenerationAnalytics>('/v1/generate/analytics/')
+    return response.data
+  }
+
+  // LLM Services endpoints
+  async getLLMModelStats(): Promise<LLMModelStats[]> {
+    const response = await this.client.get<LLMModelStats[]>('/v1/llm/model-stats/')
+    return response.data
+  }
+
+  async selectLLMModel(modelId: string): Promise<{ message: string; selected_model: string }> {
+    const response = await this.client.post<{ message: string; selected_model: string }>('/v1/llm/select-model/', { model_id: modelId })
+    return response.data
+  }
+
+  async getLLMSystemHealth(): Promise<LLMSystemHealth> {
+    const response = await this.client.get<LLMSystemHealth>('/v1/llm/system-health/')
+    return response.data
+  }
+
+  async getAvailableLLMModels(): Promise<string[]> {
+    const response = await this.client.get<{ models: string[] }>('/v1/llm/available-models/')
+    return response.data.models
+  }
+
+  async getLLMPerformanceMetrics(params?: Record<string, string>): Promise<PaginatedResponse<LLMPerformanceMetric>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
+    const response = await this.client.get<PaginatedResponse<LLMPerformanceMetric>>(`/v1/llm/performance-metrics/${queryString}`)
+    return response.data
+  }
+
+  async getLLMCircuitBreakers(): Promise<any> {
+    const response = await this.client.get('/v1/llm/circuit-breakers/')
+    return response.data
+  }
+
+  async getLLMCostTracking(params?: Record<string, string>): Promise<PaginatedResponse<LLMCostTracking>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
+    const response = await this.client.get<PaginatedResponse<LLMCostTracking>>(`/v1/llm/cost-tracking/${queryString}`)
+    return response.data
+  }
+
+  async getLLMJobEmbeddings(params?: Record<string, string>): Promise<PaginatedResponse<JobDescriptionEmbedding>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
+    const response = await this.client.get<PaginatedResponse<JobDescriptionEmbedding>>(`/v1/llm/job-embeddings/${queryString}`)
+    return response.data
+  }
+
+  async getLLMEnhancedArtifacts(params?: Record<string, string>): Promise<PaginatedResponse<EnhancedArtifact>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
+    const response = await this.client.get<PaginatedResponse<EnhancedArtifact>>(`/v1/llm/enhanced-artifacts/${queryString}`)
     return response.data
   }
 }

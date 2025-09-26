@@ -39,7 +39,7 @@ export interface Artifact {
   id: number;
   title: string;
   description: string;
-  artifact_type: 'project' | 'experience' | 'education' | 'certification' | 'other';
+  artifact_type: 'project' | 'experience' | 'education' | 'certification' | 'publication' | 'presentation';
   start_date: string;
   end_date?: string;
   technologies: string[];
@@ -76,7 +76,7 @@ export interface Label {
 export interface ArtifactCreateData {
   title: string;
   description: string;
-  artifact_type?: 'project' | 'experience' | 'education' | 'certification' | 'other';
+  artifact_type?: 'project' | 'experience' | 'education' | 'certification' | 'publication' | 'presentation';
   start_date?: string;
   end_date?: string;
   technologies?: string[];
@@ -246,4 +246,113 @@ export interface UploadProgress {
   progress: number;
   status: 'uploading' | 'processing' | 'completed' | 'failed';
   error?: string;
+}
+
+// LLM Services Types
+export interface LLMModelStats {
+  model_id: string;
+  requests_count: number;
+  avg_response_time: number;
+  success_rate: number;
+  error_count: number;
+  total_tokens_used: number;
+  cost_usd: number;
+}
+
+export interface LLMSystemHealth {
+  status: 'healthy' | 'degraded' | 'down';
+  models: {
+    [modelId: string]: {
+      status: 'available' | 'unavailable';
+      response_time_ms: number;
+      last_check: string;
+    };
+  };
+  circuit_breakers: {
+    [modelId: string]: {
+      state: 'closed' | 'open' | 'half-open';
+      failure_count: number;
+      last_failure: string;
+    };
+  };
+}
+
+export interface LLMPerformanceMetric {
+  id: number;
+  model_id: string;
+  request_type: string;
+  response_time_ms: number;
+  tokens_used: number;
+  cost_usd: number;
+  success: boolean;
+  error_message?: string;
+  created_at: string;
+}
+
+export interface LLMCostTracking {
+  id: number;
+  model_id: string;
+  date: string;
+  total_requests: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  avg_cost_per_request: number;
+}
+
+export interface JobDescriptionEmbedding {
+  id: number;
+  job_description_hash: string;
+  company_name: string;
+  role_title: string;
+  embedding_vector: number[];
+  created_at: string;
+}
+
+export interface EnhancedArtifact {
+  id: number;
+  artifact_id: number;
+  enhanced_description: string;
+  extracted_skills: string[];
+  impact_metrics: string[];
+  relevance_score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Analytics Types
+export interface GenerationAnalytics {
+  total_generations: number;
+  generations_by_type: {
+    cv: number;
+    cover_letter: number;
+  };
+  avg_generation_time_seconds: number;
+  success_rate: number;
+  most_used_templates: Array<{
+    template_id: number;
+    usage_count: number;
+  }>;
+  artifacts_usage: Array<{
+    artifact_id: number;
+    usage_count: number;
+  }>;
+}
+
+export interface ExportAnalytics {
+  total_exports: number;
+  exports_by_format: {
+    pdf: number;
+    docx: number;
+  };
+  avg_export_time_seconds: number;
+  success_rate: number;
+  most_used_templates: Array<{
+    template_id: number;
+    usage_count: number;
+  }>;
+  file_size_stats: {
+    avg_size_mb: number;
+    min_size_mb: number;
+    max_size_mb: number;
+  };
 }

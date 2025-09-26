@@ -6,7 +6,9 @@ import {
   Zap,
   User,
   LogOut,
-  FileText
+  FileText,
+  Brain,
+  BarChart3
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
@@ -20,6 +22,8 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Artifacts', href: '/artifacts', icon: FolderOpen },
   { name: 'Generate CV', href: '/generate', icon: Zap },
+  { name: 'LLM Services', href: '/llm', icon: Brain },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Profile', href: '/profile', icon: User },
 ]
 
@@ -82,12 +86,12 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                 <span className="text-sm font-medium text-blue-600">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  {user?.first_name?.[0]}{user?.last_name?.[0]}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.firstName} {user?.lastName}
+                  {user?.first_name} {user?.last_name}
                 </p>
                 <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               </div>

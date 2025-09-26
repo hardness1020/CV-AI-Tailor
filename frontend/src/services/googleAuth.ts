@@ -260,7 +260,7 @@ export class GoogleAuthService {
    */
   async exchangeCredentialForTokens(credential: string): Promise<GoogleAuthResponse> {
     try {
-      const response = await apiClient.post('/auth/google/', {
+      const response = await apiClient.client.post('/v1/auth/google/', {
         credential
       })
 
@@ -293,7 +293,7 @@ export class GoogleAuthService {
    */
   async linkGoogleAccount(credential: string): Promise<{ message: string; linked_email: string }> {
     try {
-      const response = await apiClient.post('/auth/google/link/', {
+      const response = await apiClient.client.post('/v1/auth/google/link/', {
         credential
       })
 
@@ -312,7 +312,7 @@ export class GoogleAuthService {
    */
   async unlinkGoogleAccount(): Promise<{ message: string }> {
     try {
-      const response = await apiClient.post('/auth/google/unlink/')
+      const response = await apiClient.client.post('/v1/auth/google/unlink/')
       return response.data
     } catch (error: any) {
       if (error.response?.status === 400) {

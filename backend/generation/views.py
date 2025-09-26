@@ -70,6 +70,62 @@ def generate_cv(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+# @ratelimit(key='user', rate='10/h', method='POST')
+def generate_cover_letter(request):
+    """
+    Generate cover letter based on job description and user artifacts.
+    Similar to CV generation but for cover letters.
+    """
+    serializer = CVGenerationRequestSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        data = serializer.validated_data
+
+        # Get or create job description
+        job_desc, created = JobDescription.get_or_create_from_content(
+            data['job_description'],
+            data.get('company_name', ''),
+            data.get('role_title', '')
+        )
+
+        # Set expiration (90 days from now)
+        expires_at = timezone.now() + timedelta(days=90)
+
+        # Create generation document for cover letter
+        generation = GeneratedDocument.objects.create(
+            user=request.user,
+            document_type='cover_letter',
+            job_description_hash=job_desc.content_hash,
+            job_description=job_desc,
+            label_ids=data.get('label_ids', []),
+            template_id=data.get('template_id', 1),
+            custom_sections=data.get('custom_sections', {}),
+            generation_preferences=data.get('generation_preferences', {}),
+            expires_at=expires_at
+        )
+
+        # Start async generation (same task handles both types)
+        generate_cv_task.delay(str(generation.id))
+
+        return Response({
+            'generation_id': str(generation.id),
+            'status': 'processing',
+            'estimated_completion_time': timezone.now() + timedelta(seconds=30),
+            'job_description_hash': job_desc.content_hash
+        }, status=status.HTTP_202_ACCEPTED)
+
+    except Exception as e:
+        return Response({
+            'error': 'Failed to initiate cover letter generation',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def generation_status(request, generation_id):

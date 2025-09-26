@@ -5,7 +5,9 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { User, Mail, MapPin, Globe, Save, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { apiClient } from '@/services/apiClient'
 import { cn } from '@/utils/cn'
+import { useErrorHandler } from '@/utils/errorHandling'
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -29,7 +31,8 @@ type ProfileForm = z.infer<typeof profileSchema>
 type PasswordForm = z.infer<typeof passwordSchema>
 
 export default function ProfilePage() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
+  const { handleError, handleValidationError } = useErrorHandler()
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
@@ -44,12 +47,12 @@ export default function ProfilePage() {
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
+      firstName: user?.first_name || '',
+      lastName: user?.last_name || '',
       email: user?.email || '',
-      bio: user?.profile?.bio || '',
-      location: user?.profile?.location || '',
-      website: user?.profile?.website || '',
+      bio: user?.bio || '',
+      location: user?.location || '',
+      website: user?.website_url || '',
     },
   })
 
@@ -65,27 +68,37 @@ export default function ProfilePage() {
   const onProfileSubmit = async (data: ProfileForm) => {
     setIsProfileLoading(true)
     try {
-      // API call to update profile
-      console.log('Updating profile:', data)
+      const updateData = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        bio: data.bio || null,
+        location: data.location || null,
+        website_url: data.website || null,
+      }
+
+      const updatedUser = await apiClient.updateProfile(updateData)
+      setUser(updatedUser)
       toast.success('Profile updated successfully!')
-    } catch (error) {
-      console.error('Profile update error:', error)
-      toast.error('Failed to update profile. Please try again.')
+    } catch (error: any) {
+      handleValidationError(error)
     } finally {
       setIsProfileLoading(false)
     }
   }
 
-  const onPasswordSubmit = async (_data: PasswordForm) => {
+  const onPasswordSubmit = async (data: PasswordForm) => {
     setIsPasswordLoading(true)
     try {
-      // API call to change password
-      console.log('Changing password')
+      await apiClient.changePassword({
+        current_password: data.currentPassword,
+        new_password: data.newPassword,
+        new_password_confirm: data.confirmPassword,
+      })
       toast.success('Password changed successfully!')
       resetPassword()
-    } catch (error) {
-      console.error('Password change error:', error)
-      toast.error('Failed to change password. Please try again.')
+    } catch (error: any) {
+      handleValidationError(error)
     } finally {
       setIsPasswordLoading(false)
     }
@@ -111,16 +124,16 @@ export default function ProfilePage() {
         <div className="flex items-center space-x-4">
           <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
             <span className="text-2xl font-bold text-blue-600">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+              {user?.first_name?.[0]}{user?.last_name?.[0]}
             </span>
           </div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
-              {user?.firstName} {user?.lastName}
+              {user?.first_name} {user?.last_name}
             </h2>
             <p className="text-gray-600">{user?.email}</p>
             <p className="text-sm text-gray-500">
-              Member since {new Date(user?.profile?.createdAt || '').toLocaleDateString()}
+              Member since {new Date(user?.created_at || '').toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -387,7 +400,7 @@ export default function ProfilePage() {
                     <div>
                       <p className="font-medium text-gray-900">Account Created</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(user?.profile?.createdAt || '').toLocaleDateString()}
+                        {new Date(user?.created_at || '').toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -396,7 +409,7 @@ export default function ProfilePage() {
                     <div>
                       <p className="font-medium text-gray-900">Last Updated</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(user?.profile?.updatedAt || '').toLocaleDateString()}
+                        {new Date(user?.updated_at || '').toLocaleDateString()}
                       </p>
                     </div>
                   </div>
