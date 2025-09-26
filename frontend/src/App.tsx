@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
@@ -12,8 +12,6 @@ import ArtifactsPage from '@/pages/ArtifactsPage'
 import ArtifactDetailPage from '@/pages/ArtifactDetailPage'
 import GeneratePage from '@/pages/GeneratePage'
 import ProfilePage from '@/pages/ProfilePage'
-import LLMDashboardPage from '@/pages/LLMDashboardPage'
-import AnalyticsPage from '@/pages/AnalyticsPage'
 
 function App() {
   const { isAuthenticated, setUser, setLoading, clearAuth } = useAuthStore()
@@ -96,26 +94,6 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <ProfilePage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/llm"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <LLMDashboardPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <AnalyticsPage />
             </Layout>
           </ProtectedRoute>
         }

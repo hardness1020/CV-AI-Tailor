@@ -7,8 +7,6 @@ import {
   User,
   LogOut,
   FileText,
-  Brain,
-  BarChart3
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
@@ -22,8 +20,6 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Artifacts', href: '/artifacts', icon: FolderOpen },
   { name: 'Generate CV', href: '/generate', icon: Zap },
-  { name: 'LLM Services', href: '/llm', icon: Brain },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Profile', href: '/profile', icon: User },
 ]
 
