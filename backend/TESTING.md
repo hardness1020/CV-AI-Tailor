@@ -218,3 +218,58 @@ For testing actual API integrations with OpenAI and Anthropic services, the `llm
   - Document processing with embedding generation
   - Background task processing with Celery
   - Performance tracking and metrics collection
+
+## Development Database Setup
+
+### Test Accounts (Created: 2025-09-26)
+
+For development and testing purposes, the following accounts have been created:
+
+#### Superuser Account (Admin Access)
+- **Username**: `admin`
+- **Email**: `admin@cvtailor.test`
+- **Password**: `adminpass123`
+- **Privileges**: Can access Django Admin, full API access
+
+#### Regular User Account (App Testing)
+- **Username**: `testuser`
+- **Email**: `test@cvtailor.test`
+- **Password**: `testpass123`
+- **Privileges**: Standard user, frontend app access only
+
+**Login Instructions**:
+
+1. **Django Admin** (Session-based):
+   - URL: `http://localhost:8000/admin/`
+   - Use: **Username** + Password (`admin` / `adminpass123`)
+
+2. **Frontend App** (JWT-based):
+   - **Superuser**: Email + Password (`admin@cvtailor.test` / `adminpass123`)
+   - **Regular User**: Email + Password (`test@cvtailor.test` / `testpass123`)
+   - Login via API: `POST /api/v1/auth/login/` with email/password JSON
+
+**Important Notes**:
+- ✅ **Superuser CAN login to frontend app** - use the email address, not username
+- The app uses custom User model with `USERNAME_FIELD = 'email'`
+- Both Django Admin and frontend app login work correctly
+- Frontend requires email address for authentication, not username
+
+**Security Note**: These are development-only accounts. Never use these credentials in production environments.
+
+### Database Reset Instructions
+
+If you need to reset the database:
+```bash
+# Delete existing database (if SQLite)
+rm -f db.sqlite3
+
+# Or reset PostgreSQL database
+docker-compose down
+docker-compose up -d db
+
+# Run migrations
+uv run python manage.py migrate
+
+# Create superuser
+echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@cvtailor.test', 'adminpass123')" | uv run python manage.py shell
+```
