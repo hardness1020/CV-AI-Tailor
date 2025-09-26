@@ -115,9 +115,9 @@ class EnhancedArtifactTestCase(TestCase):
             raw_content='Raw resume content...',
             processed_content={'sections': ['education', 'experience']},
             embedding_cost_usd=Decimal('0.001'),
-            # Provide empty lists for vector fields to avoid SQLite issues
-            content_embedding=[],
-            summary_embedding=[]
+            # Provide dummy vectors for pgvector (must have at least 1 dimension)
+            content_embedding=[0.0] * 1536,
+            summary_embedding=[0.0] * 1536
         )
 
         self.assertEqual(artifact.title, 'Test Resume')
@@ -133,8 +133,8 @@ class EnhancedArtifactTestCase(TestCase):
             title='My Portfolio',
             content_type='github',
             raw_content='Portfolio content...',
-            content_embedding=[],
-            summary_embedding=[]
+            content_embedding=[0.0] * 1536,
+            summary_embedding=[0.0] * 1536
         )
         # The actual __str__ method only shows title and content_type
         expected = "My Portfolio (github)"
@@ -153,8 +153,8 @@ class ArtifactChunkTestCase(TestCase):
             title='Test Artifact',
             content_type='text',
             raw_content='Test content...',
-            content_embedding=[],
-            summary_embedding=[]
+            content_embedding=[0.0] * 1536,
+            summary_embedding=[0.0] * 1536
         )
 
     def test_create_artifact_chunk(self):
@@ -166,7 +166,7 @@ class ArtifactChunkTestCase(TestCase):
             content_hash='abc123def456',
             tokens_used=50,
             processing_cost_usd=Decimal('0.0001'),
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
 
         self.assertEqual(chunk.artifact, self.artifact)
@@ -181,7 +181,7 @@ class ArtifactChunkTestCase(TestCase):
             chunk_index=0,
             content='First chunk...',
             content_hash='abc123',
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
 
         # Try to create another chunk with same artifact and index
@@ -191,7 +191,7 @@ class ArtifactChunkTestCase(TestCase):
                 chunk_index=0,  # Same index
                 content='Duplicate chunk...',
                 content_hash='def456',
-                embedding_vector=[]
+                embedding_vector=[0.0] * 1536
             )
 
     def test_chunk_str_representation(self):
@@ -201,7 +201,7 @@ class ArtifactChunkTestCase(TestCase):
             chunk_index=2,
             content='Chunk content...',
             content_hash='abc123',
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
         expected = f"Test Artifact - Chunk 2"
         self.assertEqual(str(chunk), expected)
@@ -224,7 +224,7 @@ class JobDescriptionEmbeddingTestCase(TestCase):
             role_title='Senior Developer',
             tokens_used=200,
             cost_usd=Decimal('0.0002'),
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
 
         self.assertEqual(embedding.company_name, 'Tech Corp')
@@ -239,7 +239,7 @@ class JobDescriptionEmbeddingTestCase(TestCase):
             job_description_hash='unique_hash_123',
             company_name='Tech Corp',
             role_title='Developer',
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
 
         # Try to create another with same hash
@@ -249,7 +249,7 @@ class JobDescriptionEmbeddingTestCase(TestCase):
                 job_description_hash='unique_hash_123',  # Same hash
                 company_name='Other Corp',
                 role_title='Engineer',
-                embedding_vector=[]
+                embedding_vector=[0.0] * 1536
             )
 
     def test_increment_access_count(self):
@@ -258,7 +258,7 @@ class JobDescriptionEmbeddingTestCase(TestCase):
             user=self.user,
             job_description_hash='test_hash',
             company_name='Test Corp',
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
 
         # Simulate accessing the embedding
@@ -276,7 +276,7 @@ class JobDescriptionEmbeddingTestCase(TestCase):
             job_description_hash='test_hash',
             company_name='Google',
             role_title='Software Engineer',
-            embedding_vector=[]
+            embedding_vector=[0.0] * 1536
         )
         # The actual __str__ method shows: "Job Embedding: {role_title} at {company_name}"
         expected = "Job Embedding: Software Engineer at Google"
@@ -351,14 +351,14 @@ class CircuitBreakerStateTestCase(TestCase):
     def test_create_circuit_breaker(self):
         """Test creating circuit breaker state"""
         breaker = CircuitBreakerState.objects.create(
-            model_name='gpt-4o',
+            model_name='test-create-breaker-model',
             failure_count=0,
             state='closed',
             failure_threshold=5,
             timeout_duration=30
         )
 
-        self.assertEqual(breaker.model_name, 'gpt-4o')
+        self.assertEqual(breaker.model_name, 'test-create-breaker-model')
         self.assertEqual(breaker.failure_count, 0)
         self.assertEqual(breaker.state, 'closed')
 
@@ -434,11 +434,11 @@ class CircuitBreakerStateTestCase(TestCase):
     def test_circuit_breaker_str_representation(self):
         """Test string representation"""
         breaker = CircuitBreakerState.objects.create(
-            model_name='gpt-4o',
+            model_name='test-string-repr-model',
             state='closed'
         )
         # The actual __str__ method shows: "{model_name} - {state} ({failure_count} failures)"
-        expected = "gpt-4o - closed (0 failures)"
+        expected = "test-string-repr-model - closed (0 failures)"
         self.assertEqual(str(breaker), expected)
 
     def test_circuit_breaker_unique_model_name(self):

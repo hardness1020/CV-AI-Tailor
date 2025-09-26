@@ -23,6 +23,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.test import override_settings
 from unittest import skipIf
+from .test_api_utils import has_openai_api_key, has_anthropic_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -66,27 +67,10 @@ class RealAPITestConfig:
 
     def __init__(self):
         self.budget = TokenBudget()
-        self.openai_available = bool(os.environ.get('OPENAI_API_KEY'))
-        self.anthropic_available = bool(os.environ.get('ANTHROPIC_API_KEY'))
-        self.force_real_tests = os.environ.get('FORCE_REAL_API_TESTS', '').lower() == 'true'
+        self.openai_available = has_openai_api_key()
+        self.anthropic_available = has_anthropic_api_key()
 
-    def should_run_real_tests(self) -> bool:
-        """Determine if real API tests should run"""
-        return (
-            self.openai_available and
-            (self.force_real_tests or self.is_safe_environment())
-        )
 
-    def is_safe_environment(self) -> bool:
-        """Check if environment is safe for real API testing"""
-        # Add environment checks to prevent accidental expensive tests
-        env_indicators = [
-            'test' in os.environ.get('DJANGO_SETTINGS_MODULE', '').lower(),
-            os.environ.get('TESTING') == '1',
-            os.environ.get('CI') == 'true',
-            'pytest' in os.environ.get('_', ''),
-        ]
-        return any(env_indicators)
 
     def get_safe_django_settings(self) -> Dict[str, Any]:
         """Get Django settings overrides for safe testing"""
@@ -232,35 +216,35 @@ class TestDataFactory:
         return validations
 
 
-# Decorators for safe real API testing
+# Decorators for real API testing
 def require_real_api_key(api_provider: str = 'openai'):
-    """Decorator to skip tests if API key is not available"""
-    if api_provider == 'openai':
-        condition = not bool(os.environ.get('OPENAI_API_KEY'))
-        reason = "OpenAI API key not available"
-    elif api_provider == 'anthropic':
-        condition = not bool(os.environ.get('ANTHROPIC_API_KEY'))
-        reason = "Anthropic API key not available"
-    else:
-        condition = True
-        reason = f"Unknown API provider: {api_provider}"
+    """Decorator to check if API key is available, raise error if not"""
+    def decorator(test_func):
+        def wrapper(*args, **kwargs):
+            if api_provider == 'openai':
+                if not has_openai_api_key():
+                    raise RuntimeError("ERROR: OpenAI API key is required for real API tests. Please set OPENAI_API_KEY environment variable.")
+            elif api_provider == 'anthropic':
+                if not has_anthropic_api_key():
+                    raise RuntimeError("ERROR: Anthropic API key is required for real API tests. Please set ANTHROPIC_API_KEY environment variable.")
+            else:
+                raise RuntimeError(f"ERROR: Unknown API provider: {api_provider}")
 
-    return skipIf(condition, reason)
+            return test_func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def with_budget_control(budget: Optional[TokenBudget] = None):
     """Decorator to add budget control to test methods"""
     def decorator(test_func):
         def wrapper(self, *args, **kwargs):
-            config = RealAPITestConfig()
-            if not config.should_run_real_tests():
-                self.skipTest("Real API tests not enabled")
-
-            # Run the test
+            # Run the test directly since real API tests should always run if API keys are available
             result = test_func(self, *args, **kwargs)
 
             # Validate budget if result contains metadata
             if hasattr(result, 'get') and isinstance(result, dict):
+                config = RealAPITestConfig()
                 config.validate_test_result(result, test_func.__name__)
 
             return result
@@ -333,7 +317,8 @@ TEST_DATA = TestDataFactory()
 # Validation on import
 if __name__ == '__main__':
     config = RealAPITestConfig()
-    print(f"Real API tests enabled: {config.should_run_real_tests()}")
+    print(f"OpenAI API available: {config.openai_available}")
+    print(f"Anthropic API available: {config.anthropic_available}")
     print(f"Budget: {config.budget}")
 
     validation = TestDataFactory.validate_minimal_data()

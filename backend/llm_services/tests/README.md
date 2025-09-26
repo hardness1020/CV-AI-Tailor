@@ -1,19 +1,21 @@
 # LLM Services Test Suite
 
-Comprehensive unit tests for the LLM Services Django app, covering models, services, views, tasks, and serializers.
+Comprehensive test suite for the LLM Services Django app, covering models, services, views, tasks, serializers, and real API integrations.
 
 ## Test Structure
 
 ```
 tests/
 ├── __init__.py
-├── conftest.py          # Pytest configuration and fixtures
-├── test_models.py       # Model tests
-├── test_services.py     # Service class tests
-├── test_views.py        # API view tests
-├── test_tasks.py        # Celery task tests
-├── test_serializers.py  # DRF serializer tests
-└── README.md           # This file
+├── conftest.py              # Pytest configuration and fixtures
+├── test_models.py           # Model tests
+├── test_services.py         # Service class tests
+├── test_views.py            # API view tests
+├── test_tasks.py            # Celery task tests
+├── test_serializers.py      # DRF serializer tests
+├── test_real_*.py           # Real API integration tests
+├── run_real_api_tests.py    # Real API test runner
+└── README.md               # This file
 ```
 
 ## Running Tests
@@ -37,6 +39,26 @@ uv run pytest llm_services/tests/test_serializers.py
 ```bash
 uv run pytest llm_services/tests/ --cov=llm_services --cov-report=html
 ```
+
+### Real API Integration Tests
+
+For tests that use actual LLM APIs (OpenAI, Anthropic) with budget controls:
+
+```bash
+# Check configuration and API keys
+uv run python llm_services/tests/run_real_api_tests.py --check-config
+
+# Run basic real API tests (~$0.10)
+uv run python llm_services/tests/run_real_api_tests.py --run-basic --max-cost=0.10 --force
+
+# Run all real API tests (~$0.35)
+uv run python llm_services/tests/run_real_api_tests.py --run-all --max-cost=0.50 --force
+
+# Run specific real API test
+uv run python llm_services/tests/run_real_api_tests.py --run-single test_real_job_description_parsing
+```
+
+⚠️ **Warning**: Real API tests use actual API tokens and incur costs. See main TESTING.md for complete documentation.
 
 ### Specific Test Classes or Methods
 ```bash

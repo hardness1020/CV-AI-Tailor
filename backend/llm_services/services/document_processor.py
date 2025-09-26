@@ -133,6 +133,7 @@ class AdvancedDocumentProcessor:
                     'splitting_strategy': self._get_splitting_strategy_name(content_type),
                     'original_document_count': len(documents),
                     'chunks_generated': len(chunks),
+                    'total_chunks': len(enhanced_chunks),
                     'llm_enhancement_applied': True
                 }
             }

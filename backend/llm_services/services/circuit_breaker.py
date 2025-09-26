@@ -61,6 +61,7 @@ class CircuitBreakerManager:
         except Exception as e:
             logger.error(f"Error recording success for {model_name}: {e}")
 
+    @sync_to_async
     def record_failure(self, model_name: str, error_type: Optional[str] = None) -> None:
         """Record a failure for the model"""
         try:
@@ -83,6 +84,63 @@ class CircuitBreakerManager:
         except Exception as e:
             logger.error(f"Error recording failure for {model_name}: {e}")
 
+    def record_failure_sync(self, model_name: str, error_type: Optional[str] = None) -> None:
+        """Record a failure for the model (synchronous version for tests)"""
+        try:
+            breaker, created = CircuitBreakerState.objects.get_or_create(
+                model_name=model_name,
+                defaults={
+                    'failure_threshold': self.failure_threshold,
+                    'timeout_duration': self.timeout_duration
+                }
+            )
+
+            breaker.record_failure()
+
+            # Log the state change
+            if breaker.state == 'open':
+                logger.warning(f"Circuit breaker for {model_name} is now OPEN after {breaker.failure_count} failures")
+            else:
+                logger.debug(f"Circuit breaker for {model_name}: recorded failure ({breaker.failure_count}/{breaker.failure_threshold})")
+
+        except Exception as e:
+            logger.error(f"Error recording failure for {model_name}: {e}")
+
+    def record_success_sync(self, model_name: str) -> None:
+        """Record a successful request for the model (synchronous version for tests)"""
+        try:
+            breaker, created = CircuitBreakerState.objects.get_or_create(
+                model_name=model_name,
+                defaults={
+                    'failure_threshold': self.failure_threshold,
+                    'timeout_duration': self.timeout_duration
+                }
+            )
+
+            breaker.record_success()
+            logger.debug(f"Circuit breaker for {model_name}: recorded success, reset to closed state")
+
+        except Exception as e:
+            logger.error(f"Error recording success for {model_name}: {e}")
+
+    def can_attempt_request_sync(self, model_name: str) -> bool:
+        """Check if we should attempt a request to the given model (synchronous version for tests)"""
+        try:
+            breaker, created = CircuitBreakerState.objects.get_or_create(
+                model_name=model_name,
+                defaults={
+                    'failure_threshold': self.failure_threshold,
+                    'timeout_duration': self.timeout_duration
+                }
+            )
+
+            return breaker.should_attempt_request()
+
+        except Exception as e:
+            logger.error(f"Error checking circuit breaker for {model_name}: {e}")
+            # Default to allowing requests if breaker check fails
+            return True
+
     def get_breaker_status(self, model_name: str) -> Dict[str, any]:
         """Get current status of circuit breaker for a model"""
         try:
@@ -101,7 +159,8 @@ class CircuitBreakerManager:
                 'time_since_failure_seconds': time_since_failure,
                 'timeout_duration_seconds': breaker.timeout_duration,
                 'can_attempt_request': breaker.should_attempt_request(),
-                'time_until_retry': max(0, breaker.timeout_duration - time_since_failure) if time_since_failure else 0
+                'time_until_retry': max(0, breaker.timeout_duration - time_since_failure) if time_since_failure else 0,
+                'is_healthy': breaker.state == 'closed'
             }
 
         except CircuitBreakerState.DoesNotExist:
@@ -114,8 +173,13 @@ class CircuitBreakerManager:
                 'time_since_failure_seconds': None,
                 'timeout_duration_seconds': self.timeout_duration,
                 'can_attempt_request': True,
-                'time_until_retry': 0
+                'time_until_retry': 0,
+                'is_healthy': True
             }
+
+    async def get_breaker_status_async(self, model_name: str) -> Dict[str, any]:
+        """Async version of get_breaker_status for use in async contexts"""
+        return await sync_to_async(self.get_breaker_status)(model_name)
 
     def get_all_breaker_statuses(self) -> Dict[str, Dict[str, any]]:
         """Get status of all circuit breakers"""

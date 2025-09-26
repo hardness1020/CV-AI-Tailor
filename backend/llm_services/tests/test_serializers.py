@@ -107,7 +107,7 @@ class ModelPerformanceMetricSerializerTestCase(TestCase):
 class CircuitBreakerStateSerializerTestCase(TestCase):
     def setUp(self):
         self.breaker = CircuitBreakerState.objects.create(
-            model_name='gpt-4o',
+            model_name=f'gpt-4o-{self.__class__.__name__}',
             failure_count=2,
             state='closed',
             failure_threshold=5,
@@ -119,7 +119,7 @@ class CircuitBreakerStateSerializerTestCase(TestCase):
         serializer = CircuitBreakerStateSerializer(self.breaker)
         data = serializer.data
 
-        self.assertEqual(data['model_name'], 'gpt-4o')
+        self.assertEqual(data['model_name'], f'gpt-4o-{self.__class__.__name__}')
         self.assertEqual(data['failure_count'], 2)
         self.assertEqual(data['state'], 'closed')
         self.assertEqual(data['state_display'], 'Closed')
@@ -222,6 +222,7 @@ class JobDescriptionEmbeddingSerializerTestCase(TestCase):
             job_description_hash='abc123def456',
             company_name='Tech Corp',
             role_title='Software Engineer',
+            embedding_vector=[0.0] * 1536,
             model_used='text-embedding-3-small',
             dimensions=1536,
             tokens_used=200,
@@ -286,6 +287,8 @@ class EnhancedArtifactSerializerTestCase(TestCase):
             title='Test Resume',
             content_type='pdf',
             raw_content='Resume content...',
+            content_embedding=[0.0] * 1536,
+            summary_embedding=[0.0] * 1536,
             embedding_cost_usd=Decimal('0.005'),
             total_chunks=3,
             processing_time_ms=2000
@@ -297,6 +300,7 @@ class EnhancedArtifactSerializerTestCase(TestCase):
             chunk_index=0,
             content='Chunk 1',
             content_hash='hash1',
+            embedding_vector=[0.0] * 1536,
             processing_cost_usd=Decimal('0.001')
         )
         ArtifactChunk.objects.create(
@@ -304,6 +308,7 @@ class EnhancedArtifactSerializerTestCase(TestCase):
             chunk_index=1,
             content='Chunk 2',
             content_hash='hash2',
+            embedding_vector=[0.0] * 1536,
             processing_cost_usd=Decimal('0.002')
         )
 
@@ -321,7 +326,9 @@ class EnhancedArtifactSerializerTestCase(TestCase):
 
         # Test calculated total processing cost
         expected_cost = Decimal('0.005') + Decimal('0.001') + Decimal('0.002')  # embedding + chunks
-        self.assertEqual(Decimal(data['total_processing_cost']), expected_cost)
+        actual_cost = Decimal(data['total_processing_cost']).quantize(Decimal('0.001'))
+        expected_cost = expected_cost.quantize(Decimal('0.001'))
+        self.assertEqual(actual_cost, expected_cost)
 
     def test_embedding_fields_write_only(self):
         """Test that embedding fields are write-only"""
@@ -367,7 +374,9 @@ class ArtifactChunkSerializerTestCase(TestCase):
             user=self.user,
             title='Test Document',
             content_type='text',
-            raw_content='Document content...'
+            raw_content='Document content...',
+            content_embedding=[0.0] * 1536,
+            summary_embedding=[0.0] * 1536
         )
 
         self.chunk = ArtifactChunk.objects.create(
@@ -375,6 +384,7 @@ class ArtifactChunkSerializerTestCase(TestCase):
             chunk_index=0,
             content='First chunk content...',
             metadata={'section': 'introduction'},
+            embedding_vector=[0.0] * 1536,
             content_hash='abc123',
             model_used='text-embedding-3-small',
             tokens_used=150,

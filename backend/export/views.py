@@ -4,6 +4,7 @@ from rest_framework.response import Response
 # from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from django.utils import timezone
+from datetime import timedelta
 from django.http import HttpResponse, Http404
 from django.core.files.storage import default_storage
 from generation.models import GeneratedDocument
@@ -71,7 +72,7 @@ def export_document(request, generation_id):
                 'sections': data.get('sections', {}),
                 'watermark': data.get('watermark'),
             },
-            expires_at=timezone.now() + timezone.timedelta(hours=24)
+            expires_at=timezone.now() + timedelta(hours=24)
         )
 
         # Start async export
@@ -84,7 +85,7 @@ def export_document(request, generation_id):
         return Response({
             'export_id': str(export_job.id),
             'status': 'processing',
-            'estimated_completion_time': timezone.now() + timezone.timedelta(seconds=10),
+            'estimated_completion_time': timezone.now() + timedelta(seconds=10),
             'file_size_estimate': 0  # Will be updated when completed
         }, status=status.HTTP_202_ACCEPTED)
 

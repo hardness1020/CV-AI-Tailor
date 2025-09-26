@@ -197,6 +197,12 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
 
+# Set API keys in environment for tests and services that check os.environ directly
+if OPENAI_API_KEY:
+    os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
+if ANTHROPIC_API_KEY:
+    os.environ['ANTHROPIC_API_KEY'] = ANTHROPIC_API_KEY
+
 # Model Selection Strategy
 MODEL_SELECTION_STRATEGY = config('MODEL_SELECTION_STRATEGY', default='balanced')
 TRACK_MODEL_PERFORMANCE = config('TRACK_MODEL_PERFORMANCE', default=True, cast=bool)

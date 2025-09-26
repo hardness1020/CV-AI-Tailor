@@ -19,6 +19,7 @@ try:
 except ImportError:
     HAS_LITELLM = False
     import openai
+    from openai import OpenAI
 
 from .model_registry import ModelRegistry
 from .model_selector import IntelligentModelSelector
@@ -159,95 +160,79 @@ class FlexibleEmbeddingService:
         """Store embeddings for an artifact and its chunks"""
 
         try:
-            with transaction.atomic():
-                # Generate main content embedding
-                main_embedding_result = await self.generate_embeddings(
-                    [content],
-                    use_case='artifact_storage',
+            # Generate main content embedding
+            main_embedding_result = await self.generate_embeddings(
+                [content],
+                use_case='artifact_storage',
+                user_id=user_id
+            )
+
+            if not main_embedding_result:
+                raise ValueError("Failed to generate main content embedding")
+
+            main_result = main_embedding_result[0]
+
+            # Store artifact embeddings using sync helper
+            artifact_result = await sync_to_async(self._store_artifact_embeddings_sync)(
+                artifact_id, main_result, chunks, user_id, content
+            )
+            enhanced_artifact = artifact_result['enhanced_artifact']
+            created = artifact_result['created']
+
+            chunk_results = []
+            total_chunk_cost = 0.0
+
+            # Process chunks if provided
+            if chunks:
+                chunk_texts = [chunk['content'] for chunk in chunks]
+                chunk_embeddings = await self.generate_embeddings(
+                    chunk_texts,
+                    use_case='chunk_storage',
                     user_id=user_id
                 )
 
-                if not main_embedding_result:
-                    raise ValueError("Failed to generate main content embedding")
+                # Store chunk embeddings using sync_to_async
+                for i, (chunk, embedding_result) in enumerate(zip(chunks, chunk_embeddings)):
+                    content_hash = hashlib.sha256(chunk['content'].encode()).hexdigest()
 
-                main_result = main_embedding_result[0]
-
-                # Update or create enhanced artifact
-                enhanced_artifact, created = EnhancedArtifact.objects.get_or_create(
-                    id=artifact_id,
-                    defaults={
-                        'user_id': user_id,
-                        'raw_content': content,
-                        'content_embedding': main_result['embedding'],
-                        'embedding_model': main_result['model_used'],
-                        'embedding_dimensions': main_result['dimensions'],
-                        'embedding_cost_usd': main_result['cost_usd'],
-                        'last_embedding_update': timezone.now()
-                    }
-                )
-
-                if not created:
-                    # Update existing artifact
-                    enhanced_artifact.content_embedding = main_result['embedding']
-                    enhanced_artifact.embedding_model = main_result['model_used']
-                    enhanced_artifact.embedding_dimensions = main_result['dimensions']
-                    enhanced_artifact.embedding_cost_usd += main_result['cost_usd']
-                    enhanced_artifact.last_embedding_update = timezone.now()
-                    enhanced_artifact.save()
-
-                chunk_results = []
-                total_chunk_cost = 0.0
-
-                # Process chunks if provided
-                if chunks:
-                    chunk_texts = [chunk['content'] for chunk in chunks]
-                    chunk_embeddings = await self.generate_embeddings(
-                        chunk_texts,
-                        use_case='chunk_storage',
-                        user_id=user_id
+                    chunk_obj, chunk_created = await sync_to_async(ArtifactChunk.objects.get_or_create)(
+                        artifact=enhanced_artifact,
+                        chunk_index=i,
+                        defaults={
+                            'content': chunk['content'],
+                            'metadata': chunk.get('metadata', {}),
+                            'embedding_vector': embedding_result['embedding'],
+                            'content_hash': content_hash,
+                            'model_used': embedding_result['model_used'],
+                            'tokens_used': embedding_result['tokens_used'],
+                            'processing_cost_usd': embedding_result['cost_usd']
+                        }
                     )
 
-                    # Store chunk embeddings
-                    for i, (chunk, embedding_result) in enumerate(zip(chunks, chunk_embeddings)):
-                        content_hash = hashlib.sha256(chunk['content'].encode()).hexdigest()
+                    if not chunk_created:
+                        # Update existing chunk
+                        chunk_obj.embedding_vector = embedding_result['embedding']
+                        chunk_obj.model_used = embedding_result['model_used']
+                        chunk_obj.tokens_used = embedding_result['tokens_used']
+                        chunk_obj.processing_cost_usd = embedding_result['cost_usd']
+                        await sync_to_async(chunk_obj.save)()
 
-                        chunk_obj, chunk_created = ArtifactChunk.objects.get_or_create(
-                            artifact=enhanced_artifact,
-                            chunk_index=i,
-                            defaults={
-                                'content': chunk['content'],
-                                'metadata': chunk.get('metadata', {}),
-                                'embedding_vector': embedding_result['embedding'],
-                                'content_hash': content_hash,
-                                'model_used': embedding_result['model_used'],
-                                'tokens_used': embedding_result['tokens_used'],
-                                'processing_cost_usd': embedding_result['cost_usd']
-                            }
-                        )
+                    chunk_results.append({
+                        'chunk_index': i,
+                        'chunk_id': str(chunk_obj.id),
+                        'embedding_dimensions': len(embedding_result['embedding']),
+                        'cost_usd': embedding_result['cost_usd']
+                    })
 
-                        if not chunk_created:
-                            # Update existing chunk
-                            chunk_obj.embedding_vector = embedding_result['embedding']
-                            chunk_obj.model_used = embedding_result['model_used']
-                            chunk_obj.tokens_used = embedding_result['tokens_used']
-                            chunk_obj.processing_cost_usd = embedding_result['cost_usd']
-                            chunk_obj.save()
+                    total_chunk_cost += embedding_result['cost_usd']
 
-                        chunk_results.append({
-                            'chunk_index': i,
-                            'chunk_id': str(chunk_obj.id),
-                            'embedding_dimensions': len(embedding_result['embedding']),
-                            'cost_usd': embedding_result['cost_usd']
-                        })
-
-                        total_chunk_cost += embedding_result['cost_usd']
-
-                # Update artifact with chunk info
+                # Update artifact with chunk info using sync_to_async
                 enhanced_artifact.total_chunks = len(chunks) if chunks else 0
                 enhanced_artifact.embedding_cost_usd += total_chunk_cost
-                enhanced_artifact.save()
+                await sync_to_async(enhanced_artifact.save)()
 
                 return {
+                    'success': True,
                     'artifact_id': str(artifact_id),
                     'main_embedding': {
                         'model_used': main_result['model_used'],
@@ -263,6 +248,42 @@ class FlexibleEmbeddingService:
         except Exception as e:
             logger.error(f"Failed to store artifact embeddings for {artifact_id}: {e}")
             raise
+
+    def _store_artifact_embeddings_sync(self, artifact_id: str, main_result: Dict[str, Any],
+                                       chunks: List[Dict[str, Any]] = None,
+                                       user_id: Optional[int] = None,
+                                       content: str = "") -> Dict[str, Any]:
+        """Synchronous database operations for store_artifact_embeddings"""
+
+        with transaction.atomic():
+            # Update or create enhanced artifact
+            enhanced_artifact, created = EnhancedArtifact.objects.get_or_create(
+                id=artifact_id,
+                defaults={
+                    'user_id': user_id,
+                    'raw_content': content,
+                    'content_embedding': main_result['embedding'],
+                    'summary_embedding': [0.0] * 1536,  # Default vector for pgvector field
+                    'embedding_model': main_result['model_used'],
+                    'embedding_dimensions': main_result['dimensions'],
+                    'embedding_cost_usd': main_result['cost_usd'],
+                    'last_embedding_update': timezone.now()
+                }
+            )
+
+            if not created:
+                # Update existing artifact
+                enhanced_artifact.content_embedding = main_result['embedding']
+                enhanced_artifact.embedding_model = main_result['model_used']
+                enhanced_artifact.embedding_dimensions = main_result['dimensions']
+                enhanced_artifact.embedding_cost_usd += main_result['cost_usd']
+                enhanced_artifact.last_embedding_update = timezone.now()
+                enhanced_artifact.save()
+
+            return {
+                'enhanced_artifact': enhanced_artifact,
+                'created': created
+            }
 
     async def generate_and_cache_job_embedding(self, job_description: str,
                                              company_name: str = "",

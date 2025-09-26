@@ -141,7 +141,7 @@ class CircuitBreakerStateViewSet(viewsets.ModelViewSet):
             'unhealthy_models': breakers.exclude(state='closed').count(),
             'models_by_state': {
                 state_choice[0]: breakers.filter(state=state_choice[0]).count()
-                for state_choice in CircuitBreakerState.STATE_CHOICES
+                for state_choice in CircuitBreakerState._meta.get_field('state').choices
             },
             'recent_failures': list(breakers.filter(
                 last_failure__gte=timezone.now() - timedelta(hours=24)
@@ -295,10 +295,13 @@ def model_stats(request):
         last_used=Max('created_at')
     ).order_by('-total_requests')
 
-    # Calculate success rates
+    # Calculate success rates and rename fields
     for stat in model_stats:
         stat['success_rate'] = (stat['success_count'] / stat['total_requests']) * 100 if stat['total_requests'] > 0 else 0
         del stat['success_count']  # Remove intermediate field
+        # Rename fields to match serializer expectation
+        stat['avg_processing_time_ms'] = stat.pop('avg_processing_time', 0)
+        stat['total_cost_usd'] = stat.pop('total_cost', 0)
 
     serializer = ModelStatsSerializer(model_stats, many=True)
 

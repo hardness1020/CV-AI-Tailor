@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from django.utils import timezone
-from django.db.models import Avg, Count, Sum
+from django.db.models import Avg, Count, Sum, Q
 from django.db import transaction
 from asgiref.sync import sync_to_async
 
@@ -93,14 +93,14 @@ class ModelPerformanceTracker:
             if not created:
                 # Update existing record
                 new_generation_count = cost_tracking.generation_count + 1
-                new_total_cost = cost_tracking.total_cost_usd + cost_usd
-                new_total_tokens = cost_tracking.total_tokens_used + tokens_used
+                new_total_cost = float(cost_tracking.total_cost_usd) + cost_usd
+                new_total_tokens = int(cost_tracking.total_tokens_used) + tokens_used
 
                 cost_tracking.total_cost_usd = new_total_cost
                 cost_tracking.generation_count = new_generation_count
-                cost_tracking.avg_cost_per_generation = new_total_cost / new_generation_count
+                cost_tracking.avg_cost_per_generation = float(new_total_cost) / new_generation_count
                 cost_tracking.total_tokens_used = new_total_tokens
-                cost_tracking.avg_tokens_per_generation = int(new_total_tokens / new_generation_count)
+                cost_tracking.avg_tokens_per_generation = int(float(new_total_tokens) / new_generation_count)
                 cost_tracking.save()
 
     def get_model_performance_summary(self, days: int = 7) -> Dict[str, Dict[str, Any]]:
@@ -119,7 +119,7 @@ class ModelPerformanceTracker:
                 avg_cost_per_generation=Avg('cost_usd'),
                 avg_quality_score=Avg('quality_score'),
                 total_generations=Count('id'),
-                success_count=Count('id', filter=models.Q(success=True)),
+                success_count=Count('id', filter=Q(success=True)),
                 total_tokens_used=Sum('tokens_used'),
                 total_cost_usd=Sum('cost_usd')
             )
@@ -172,11 +172,11 @@ class ModelPerformanceTracker:
                     'days_active': set()
                 }
 
-            model_costs[model_name]['total_cost_usd'] += record.total_cost_usd
+            model_costs[model_name]['total_cost_usd'] += float(record.total_cost_usd)
             model_costs[model_name]['total_generations'] += record.generation_count
             model_costs[model_name]['days_active'].add(record.date)
 
-            total_cost += record.total_cost_usd
+            total_cost += float(record.total_cost_usd)
             total_generations += record.generation_count
 
         # Calculate averages and convert sets to counts
@@ -365,3 +365,58 @@ class ModelPerformanceTracker:
 
         logger.info(f"Cleaned up {deleted_count[0]} old performance metrics (older than {days_to_keep} days)")
         return deleted_count[0]
+
+    def record_performance(self, **kwargs):
+        """Synchronous wrapper for record_task for backward compatibility"""
+        import asyncio
+        # Map model_name to model for backward compatibility
+        if 'model_name' in kwargs and 'model' not in kwargs:
+            kwargs['model'] = kwargs.pop('model_name')
+        return asyncio.run(self.record_task(**kwargs))
+
+    def get_model_performance_stats(self, model_name: str, task_type: str):
+        """Get performance statistics for a model and task type"""
+        summary = self.get_model_performance_summary()
+        model_data = summary.get(model_name, {})
+        task_breakdown = model_data.get('task_breakdown', {})
+        return task_breakdown.get(task_type, {})
+
+    def get_best_model_for_task(self, task_type: str, priority: str = 'balanced'):
+        """Get the best model for a given task type"""
+        summary = self.get_model_performance_summary()
+
+        best_model = None
+        best_score = 0
+
+        # Map priority aliases to canonical values
+        priority_mapping = {
+            'performance_first': 'quality',
+            'cost_optimized': 'cost',
+            'speed_first': 'speed'
+        }
+        canonical_priority = priority_mapping.get(priority, priority)
+
+        for model_name, model_data in summary.items():
+            task_data = model_data.get('task_breakdown', {}).get(task_type, {})
+            if not task_data:
+                continue
+
+            # Calculate score based on priority
+            if canonical_priority == 'speed':
+                score = 1.0 / (float(task_data.get('avg_time', 1000)) / 1000.0)  # Lower time = higher score
+            elif canonical_priority == 'quality':
+                # Quality score is only available at model level, not task level
+                score = float(model_data.get('avg_quality_score', 0))
+            elif canonical_priority == 'cost':
+                score = 1.0 / max(float(task_data.get('avg_cost', 0.001)), 0.001)  # Lower cost = higher score
+            else:  # balanced
+                time_score = 1.0 / (float(task_data.get('avg_time', 1000)) / 1000.0)
+                quality_score = float(model_data.get('avg_quality_score', 0))  # Use model-level quality
+                cost_score = 1.0 / max(float(task_data.get('avg_cost', 0.001)), 0.001)
+                score = (time_score + quality_score + cost_score) / 3
+
+            if score > best_score:
+                best_score = score
+                best_model = model_name
+
+        return best_model

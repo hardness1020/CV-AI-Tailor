@@ -5,6 +5,7 @@ DRF serializers for LLM services API endpoints.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import models
+from decimal import Decimal
 from .models import (
     ModelPerformanceMetric,
     EnhancedArtifact,
@@ -140,7 +141,7 @@ class ModelSelectionRequestSerializer(serializers.Serializer):
         'job_parsing', 'cv_generation', 'embedding', 'similarity_search'
     ])
     complexity_score = serializers.FloatField(min_value=0.0, max_value=1.0, required=False)
-    user_budget = serializers.DecimalField(max_digits=10, decimal_places=6, required=False)
+    user_budget = serializers.DecimalField(max_digits=10, decimal_places=6, min_value=Decimal('0.000001'), required=False)
     strategy = serializers.ChoiceField(
         choices=['cost_optimized', 'balanced', 'performance_first'],
         required=False

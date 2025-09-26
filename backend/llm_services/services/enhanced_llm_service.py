@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, List, Any, Optional
 from django.conf import settings
 from django.utils import timezone
+from asgiref.sync import sync_to_async
 
 # LiteLLM for unified API access
 try:
@@ -19,6 +20,16 @@ except ImportError:
     HAS_LITELLM = False
     # Fallback to direct API calls
     import openai
+    from openai import OpenAI
+    from openai import (
+        APIConnectionError,
+        APIStatusError,
+        RateLimitError,
+        AuthenticationError,
+        PermissionDeniedError,
+        BadRequestError,
+        InternalServerError
+    )
     import anthropic
 
 from .model_registry import ModelRegistry
@@ -104,7 +115,21 @@ class EnhancedLLMService:
                 response = await self._direct_api_call(selected_model, prompt, max_tokens=1000, temperature=0.1)
 
             processing_time_ms = int((time.time() - start_time) * 1000)
-            result = json.loads(response.choices[0].message.content)
+
+            # Extract JSON content from response, handling markdown code blocks
+            response_content = response.choices[0].message.content.strip()
+            if response_content.startswith('```json'):
+                # Remove markdown code block markers
+                response_content = response_content[7:]  # Remove '```json'
+                if response_content.endswith('```'):
+                    response_content = response_content[:-3]  # Remove trailing '```'
+            elif response_content.startswith('```'):
+                # Remove generic code block markers
+                response_content = response_content[3:]
+                if response_content.endswith('```'):
+                    response_content = response_content[:-3]
+
+            result = json.loads(response_content.strip())
 
             # Calculate cost
             cost = self.registry.calculate_cost(
@@ -143,32 +168,111 @@ class EnhancedLLMService:
             }
 
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM response as JSON: {e}")
+            response_content = getattr(response.choices[0].message, 'content', 'No content') if 'response' in locals() else 'No response'
+            logger.error(f"Failed to parse LLM response as JSON: {e}. Response content: {response_content[:200]}")
             return {"error": "Failed to parse job description - invalid JSON response"}
 
-        except Exception as e:
-            logger.error(f"LLM API error during job parsing: {e}")
+        except RateLimitError as e:
+            logger.warning(f"Rate limit exceeded for {selected_model} during job parsing: {e}")
             processing_time_ms = int((time.time() - start_time) * 1000)
-
-            # Record failure
-            self.circuit_breaker.record_failure(selected_model)
-
-            # Track failed performance
+            await self.circuit_breaker.record_failure(selected_model)
             await self.performance_tracker.record_task(
-                model=selected_model,
-                task_type='job_parsing',
-                processing_time_ms=processing_time_ms,
-                tokens_used=0,
-                cost_usd=0.0,
-                success=False,
-                user_id=user_id
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
             )
 
-            # Try fallback if available
-            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'api_error'}):
+            # Rate limits should trigger fallback more aggressively
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'rate_limit'}):
                 fallback_model = self.model_selector.get_fallback_model(selected_model, 'job_parsing')
                 if fallback_model and fallback_model != selected_model:
-                    logger.info(f"Attempting fallback to {fallback_model}")
+                    logger.info(f"Rate limit fallback to {fallback_model}")
+                    context['fallback_attempt'] = True
+                    return await self._retry_with_fallback(fallback_model, context, 'job_parsing', user_id)
+
+            return {"error": "Rate limit exceeded. Please try again later."}
+
+        except AuthenticationError as e:
+            logger.error(f"Authentication error for {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+            return {"error": "Authentication failed. Please check API credentials."}
+
+        except PermissionDeniedError as e:
+            logger.error(f"Permission denied for {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+            return {"error": "Access denied to the requested model."}
+
+        except APIConnectionError as e:
+            logger.error(f"Connection error for {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+
+            # Connection errors should definitely trigger fallback
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'connection'}):
+                fallback_model = self.model_selector.get_fallback_model(selected_model, 'job_parsing')
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"Connection error fallback to {fallback_model}")
+                    context['fallback_attempt'] = True
+                    return await self._retry_with_fallback(fallback_model, context, 'job_parsing', user_id)
+
+            return {"error": "Connection error. Please check your internet connection."}
+
+        except BadRequestError as e:
+            logger.error(f"Bad request for {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            # Don't record circuit breaker failure for bad requests - it's our fault, not the API's
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+            return {"error": f"Invalid request: {str(e)}"}
+
+        except InternalServerError as e:
+            logger.error(f"Internal server error for {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+
+            # Server errors should trigger fallback
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'server_error'}):
+                fallback_model = self.model_selector.get_fallback_model(selected_model, 'job_parsing')
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"Server error fallback to {fallback_model}")
+                    context['fallback_attempt'] = True
+                    return await self._retry_with_fallback(fallback_model, context, 'job_parsing', user_id)
+
+            return {"error": "Service temporarily unavailable. Please try again."}
+
+        except Exception as e:
+            logger.error(f"Unexpected error during job parsing with {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='job_parsing', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+
+            # Generic errors should still trigger fallback
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'unknown'}):
+                fallback_model = self.model_selector.get_fallback_model(selected_model, 'job_parsing')
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"Generic error fallback to {fallback_model}")
                     context['fallback_attempt'] = True
                     return await self._retry_with_fallback(fallback_model, context, 'job_parsing', user_id)
 
@@ -235,7 +339,17 @@ class EnhancedLLMService:
                     result = self._extract_json_from_text(content_text)
             else:
                 # Handle OpenAI response format
-                result = json.loads(response.choices[0].message.content)
+                response_content = response.choices[0].message.content.strip()
+                if response_content.startswith('```json'):
+                    response_content = response_content[7:]
+                    if response_content.endswith('```'):
+                        response_content = response_content[:-3]
+                elif response_content.startswith('```'):
+                    response_content = response_content[3:]
+                    if response_content.endswith('```'):
+                        response_content = response_content[:-3]
+
+                result = json.loads(response_content.strip())
 
             # Calculate quality score
             quality_score = self._calculate_cv_quality_score(result, job_data)
@@ -282,29 +396,102 @@ class EnhancedLLMService:
             logger.error(f"Failed to parse CV generation response as JSON: {e}")
             return {"error": "Failed to generate valid CV content - invalid JSON response"}
 
-        except Exception as e:
-            logger.error(f"LLM API error during CV generation: {e}")
+        except RateLimitError as e:
+            logger.warning(f"Rate limit exceeded for {selected_model} during CV generation: {e}")
             processing_time_ms = int((time.time() - start_time) * 1000)
-
-            # Record failure
-            self.circuit_breaker.record_failure(selected_model)
-
-            # Track failed performance
+            await self.circuit_breaker.record_failure(selected_model)
             await self.performance_tracker.record_task(
-                model=selected_model,
-                task_type='cv_generation',
-                processing_time_ms=processing_time_ms,
-                tokens_used=0,
-                cost_usd=0.0,
-                success=False,
-                user_id=user_id
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
             )
 
-            # Try fallback if available
-            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'api_error'}):
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'rate_limit'}):
                 fallback_model = self.model_selector.get_fallback_model(selected_model, 'cv_generation')
                 if fallback_model and fallback_model != selected_model:
-                    logger.info(f"Attempting CV generation fallback to {fallback_model}")
+                    logger.info(f"Rate limit fallback to {fallback_model} for CV generation")
+                    context['fallback_attempt'] = True
+                    return await self._retry_with_fallback(fallback_model, context, 'cv_generation', user_id)
+
+            return {"error": "Rate limit exceeded. Please try again later."}
+
+        except AuthenticationError as e:
+            logger.error(f"Authentication error for {selected_model} during CV generation: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+            return {"error": "Authentication failed. Please check API credentials."}
+
+        except PermissionDeniedError as e:
+            logger.error(f"Permission denied for {selected_model} during CV generation: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+            return {"error": "Access denied to the requested model."}
+
+        except APIConnectionError as e:
+            logger.error(f"Connection error for {selected_model} during CV generation: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'connection'}):
+                fallback_model = self.model_selector.get_fallback_model(selected_model, 'cv_generation')
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"Connection error fallback to {fallback_model} for CV generation")
+                    context['fallback_attempt'] = True
+                    return await self._retry_with_fallback(fallback_model, context, 'cv_generation', user_id)
+
+            return {"error": "Connection error. Please check your internet connection."}
+
+        except BadRequestError as e:
+            logger.error(f"Bad request for {selected_model} during CV generation: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+            return {"error": f"Invalid request: {str(e)}"}
+
+        except InternalServerError as e:
+            logger.error(f"Internal server error for {selected_model} during CV generation: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'server_error'}):
+                fallback_model = self.model_selector.get_fallback_model(selected_model, 'cv_generation')
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"Server error fallback to {fallback_model} for CV generation")
+                    context['fallback_attempt'] = True
+                    return await self._retry_with_fallback(fallback_model, context, 'cv_generation', user_id)
+
+            return {"error": "Service temporarily unavailable. Please try again."}
+
+        except Exception as e:
+            logger.error(f"Unexpected error during CV generation with {selected_model}: {e}")
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            await self.circuit_breaker.record_failure(selected_model)
+            await self.performance_tracker.record_task(
+                model=selected_model, task_type='cv_generation', processing_time_ms=processing_time_ms,
+                tokens_used=0, cost_usd=0.0, success=False, user_id=user_id
+            )
+
+            if self.model_selector.should_use_fallback(selected_model, {'error_type': 'unknown'}):
+                fallback_model = self.model_selector.get_fallback_model(selected_model, 'cv_generation')
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"Generic error fallback to {fallback_model} for CV generation")
                     context['fallback_attempt'] = True
                     return await self._retry_with_fallback(fallback_model, context, 'cv_generation', user_id)
 
@@ -402,9 +589,56 @@ class EnhancedLLMService:
 
     async def _semantic_ranking(self, artifacts: List[Dict[str, Any]], job_embedding: List[float], user_id: Optional[int]) -> List[Dict[str, Any]]:
         """Rank artifacts using semantic similarity with job requirements"""
-        # This would integrate with the embedding service to find similar artifacts
-        # For now, return keyword-based ranking as fallback
-        return artifacts
+        try:
+            from .embedding_service import FlexibleEmbeddingService
+            embedding_service = FlexibleEmbeddingService()
+
+            # Generate embeddings for each artifact if they don't have them
+            for artifact in artifacts:
+                if 'embedding' not in artifact:
+                    # Create text representation of artifact
+                    artifact_text = f"{artifact.get('title', '')} {artifact.get('description', '')} {' '.join(artifact.get('technologies', []))}"
+                    if artifact_text.strip():
+                        embedding_results = await embedding_service.generate_embeddings([artifact_text], use_case='similarity', user_id=user_id)
+                        if embedding_results and embedding_results[0].get('embedding'):
+                            artifact['embedding'] = embedding_results[0]['embedding']
+
+                # Calculate cosine similarity with job embedding
+                if 'embedding' in artifact:
+                    artifact_embedding = artifact['embedding']
+                    similarity = self._cosine_similarity(job_embedding, artifact_embedding)
+                    # Convert similarity to 0-10 scale
+                    artifact['relevance_score'] = round(similarity * 10, 2)
+                else:
+                    # Fallback to basic score if no embedding available
+                    artifact['relevance_score'] = 5.0
+
+            # Sort by relevance score
+            return sorted(artifacts, key=lambda x: x.get('relevance_score', 0), reverse=True)
+
+        except Exception as e:
+            logger.warning(f"Semantic ranking failed: {e}, falling back to basic scoring")
+            # Fallback: add basic relevance scores to all artifacts
+            for i, artifact in enumerate(artifacts):
+                # Give a basic score based on position (higher for first items)
+                artifact['relevance_score'] = max(1.0, 10.0 - (i * 1.0))
+            return sorted(artifacts, key=lambda x: x.get('relevance_score', 0), reverse=True)
+
+    def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
+        """Calculate cosine similarity between two vectors"""
+        import math
+
+        if len(vec1) != len(vec2):
+            return 0.0
+
+        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        magnitude1 = math.sqrt(sum(a * a for a in vec1))
+        magnitude2 = math.sqrt(sum(b * b for b in vec2))
+
+        if magnitude1 == 0.0 or magnitude2 == 0.0:
+            return 0.0
+
+        return dot_product / (magnitude1 * magnitude2)
 
     def _get_api_key_for_model(self, model_name: str) -> str:
         """Get appropriate API key for model"""

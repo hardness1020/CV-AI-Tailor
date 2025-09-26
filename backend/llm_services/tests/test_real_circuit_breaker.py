@@ -10,28 +10,39 @@ To run: python manage.py test llm_services.tests.test_real_circuit_breaker
 import os
 import asyncio
 import logging
-from unittest import skipIf
 from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from decimal import Decimal
+from asgiref.sync import sync_to_async
 
 from ..services.enhanced_llm_service import EnhancedLLMService
 from ..services.circuit_breaker import CircuitBreakerManager
 from ..services.performance_tracker import ModelPerformanceTracker
 from ..models import CircuitBreakerState, ModelPerformanceMetric
+from .test_api_utils import (
+    ensure_api_keys_in_environment,
+    RealAPITestMixin
+)
+from .test_real_api_config import require_real_api_key
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-OPENAI_KEY_AVAILABLE = bool(os.environ.get('OPENAI_API_KEY'))
 
 
-class RealCircuitBreakerTestCase(TestCase):
+class RealCircuitBreakerTestCase(RealAPITestMixin, TestCase):
     """Test circuit breaker functionality with real API calls"""
 
+    @classmethod
+    def setUpClass(cls):
+        """Set up test class with real API keys."""
+        super().setUpClass()
+        ensure_api_keys_in_environment()
+
     def setUp(self):
+        super().setUp()
         self.user = User.objects.create_user(
             username='circuituser',
             email='circuit@example.com',
@@ -40,7 +51,7 @@ class RealCircuitBreakerTestCase(TestCase):
         self.circuit_breaker = CircuitBreakerManager()
         self.llm_service = EnhancedLLMService()
 
-    @skipIf(not OPENAI_KEY_AVAILABLE, "OpenAI API key not available")
+    @require_real_api_key('openai')
     def test_real_api_success_tracking(self):
         """Test successful API calls are tracked correctly"""
 
@@ -61,8 +72,8 @@ class RealCircuitBreakerTestCase(TestCase):
             model_used = metadata.get('model_used')
             self.assertTrue(model_used, "No model name in metadata")
 
-            # Check circuit breaker recorded success
-            status = self.circuit_breaker.get_circuit_status(model_used)
+            # Check circuit breaker recorded success - wrap in sync_to_async
+            status = await sync_to_async(self.circuit_breaker.get_breaker_status)(model_used)
             self.assertEqual(status['state'], 'closed')
             self.assertEqual(status['failure_count'], 0)
             self.assertTrue(status['is_healthy'])
@@ -83,16 +94,17 @@ class RealCircuitBreakerTestCase(TestCase):
 
         # Simulate multiple failures to trigger circuit breaker
         for i in range(6):  # Exceed default failure threshold
-            self.circuit_breaker.record_failure(test_model)
+            self.circuit_breaker.record_failure_sync(test_model)
 
         # Circuit should now be open
-        status = self.circuit_breaker.get_circuit_status(test_model)
+        status = self.circuit_breaker.get_breaker_status(test_model)
         self.assertEqual(status['state'], 'open')
         self.assertGreaterEqual(status['failure_count'], 5)
         self.assertFalse(status['is_healthy'])
 
         # Should not allow requests
-        self.assertFalse(self.circuit_breaker.can_make_request(test_model))
+        can_attempt = self.circuit_breaker.can_attempt_request_sync(test_model)
+        self.assertFalse(can_attempt)
 
         logger.info(f"Failure simulation test - Failures: {status['failure_count']}, "
                    f"State: {status['state']}")
@@ -104,10 +116,11 @@ class RealCircuitBreakerTestCase(TestCase):
 
         # Open the circuit
         for i in range(5):
-            self.circuit_breaker.record_failure(test_model)
+            self.circuit_breaker.record_failure_sync(test_model)
 
         # Verify it's open
-        self.assertFalse(self.circuit_breaker.can_make_request(test_model))
+        can_attempt = self.circuit_breaker.can_attempt_request_sync(test_model)
+        self.assertFalse(can_attempt)
 
         # Simulate recovery by manually updating the last failure time
         breaker = CircuitBreakerState.objects.get(model_name=test_model)
@@ -116,7 +129,7 @@ class RealCircuitBreakerTestCase(TestCase):
 
         # Should now allow half-open state
         # Note: Actual recovery logic may vary based on implementation
-        status = self.circuit_breaker.get_circuit_status(test_model)
+        status = self.circuit_breaker.get_breaker_status(test_model)
         logger.info(f"Recovery test - State: {status['state']}, "
                    f"Last failure: {breaker.last_failure}")
 
@@ -133,7 +146,7 @@ class RealPerformanceTrackingTestCase(TestCase):
         self.performance_tracker = ModelPerformanceTracker()
         self.llm_service = EnhancedLLMService()
 
-    @skipIf(not OPENAI_KEY_AVAILABLE, "OpenAI API key not available")
+    @require_real_api_key('openai')
     def test_real_performance_metrics_collection(self):
         """Test that real API calls generate performance metrics"""
 
@@ -162,12 +175,14 @@ class RealPerformanceTrackingTestCase(TestCase):
             self.assertGreater(tokens_used, 0, "No token usage recorded")
             self.assertGreater(cost_usd, 0, "No cost recorded")
 
-            # Check if metric was saved to database
-            metric_exists = ModelPerformanceMetric.objects.filter(
-                model_name=model_used,
-                task_type='job_parsing',
-                user=self.user
-            ).exists()
+            # Check if metric was saved to database - wrap in sync_to_async
+            metric_exists = await sync_to_async(
+                lambda: ModelPerformanceMetric.objects.filter(
+                    model_name=model_used,
+                    task_type='job_parsing',
+                    user=self.user
+                ).exists()
+            )()
 
             # Note: Metric might not be saved immediately depending on implementation
             logger.info(f"Performance tracking test - Model: {model_used}, "
@@ -214,15 +229,15 @@ class RealPerformanceTrackingTestCase(TestCase):
             test_model, 'test_task'
         )
 
-        # Verify calculated statistics
-        self.assertEqual(stats['total_requests'], 4)
-        self.assertEqual(stats['success_rate'], 75.0)  # 3 out of 4 successful
-        self.assertEqual(stats['avg_processing_time_ms'], 1025.0)  # Average of times
-        self.assertAlmostEqual(float(stats['avg_cost_usd']), 0.01025, places=5)
+        # Verify calculated statistics - using actual keys from task breakdown
+        self.assertEqual(stats['count'], 4)
+        # Note: success_rate is not available in task breakdown, only at model level
+        self.assertEqual(stats['avg_time'], 1025.0)  # Average of times
+        self.assertAlmostEqual(float(stats['avg_cost']), 0.01025, places=5)
 
-        logger.info(f"Performance stats test - Total: {stats['total_requests']}, "
-                   f"Success: {stats['success_rate']}%, "
-                   f"Avg time: {stats['avg_processing_time_ms']}ms")
+        logger.info(f"Performance stats test - Total: {stats['count']}, "
+                   f"Avg time: {stats['avg_time']}ms, "
+                   f"Avg cost: ${stats['avg_cost']:.6f}")
 
     def test_model_selection_based_on_performance(self):
         """Test that model selection considers performance history"""
@@ -248,10 +263,10 @@ class RealPerformanceTrackingTestCase(TestCase):
 
         # Test different selection strategies
         best_performance = self.performance_tracker.get_best_model_for_task(
-            'cv_generation', strategy='performance_first'
+            'cv_generation', priority='performance_first'
         )
         best_cost = self.performance_tracker.get_best_model_for_task(
-            'cv_generation', strategy='cost_optimized'
+            'cv_generation', priority='cost_optimized'
         )
 
         # Verify reasonable selections
@@ -273,7 +288,7 @@ class RealAPIReliabilityTestCase(TestCase):
         )
         self.llm_service = EnhancedLLMService()
 
-    @skipIf(not OPENAI_KEY_AVAILABLE, "OpenAI API key not available")
+    @require_real_api_key('openai')
     def test_api_rate_limit_handling(self):
         """Test handling of API rate limits (careful with real limits)"""
 

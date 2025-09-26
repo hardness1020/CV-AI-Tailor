@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libmagic1 \
     libmagic-dev \
+    poppler-utils \
+    poppler-data \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

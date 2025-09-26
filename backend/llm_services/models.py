@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 
 try:
     from pgvector.django import VectorField
@@ -39,7 +40,7 @@ class ModelPerformanceMetric(models.Model):
     cost_usd = models.DecimalField(max_digits=10, decimal_places=6)
     quality_score = models.DecimalField(
         max_digits=3, decimal_places=2, null=True, blank=True,
-        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        validators=[MinValueValidator(Decimal('0.0')), MaxValueValidator(Decimal('1.0'))]
     )
     success = models.BooleanField(default=True)
 
@@ -47,7 +48,7 @@ class ModelPerformanceMetric(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     complexity_score = models.DecimalField(
         max_digits=3, decimal_places=2, null=True, blank=True,
-        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        validators=[MinValueValidator(Decimal('0.0')), MaxValueValidator(Decimal('1.0'))]
     )
     selection_strategy = models.CharField(max_length=50, default='balanced')
     fallback_used = models.BooleanField(default=False)
@@ -58,6 +59,7 @@ class ModelPerformanceMetric(models.Model):
 
     class Meta:
         db_table = 'model_performance_metrics'
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['model_name', 'task_type']),
             models.Index(fields=['created_at']),
@@ -115,6 +117,7 @@ class EnhancedArtifact(models.Model):
 
     class Meta:
         db_table = 'enhanced_artifacts'
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'content_type']),
             models.Index(fields=['created_at']),
@@ -162,6 +165,7 @@ class ArtifactChunk(models.Model):
 
     class Meta:
         db_table = 'artifact_chunks'
+        ordering = ['artifact', 'chunk_index']
         unique_together = ['artifact', 'chunk_index']
         indexes = [
             models.Index(fields=['artifact', 'chunk_index']),
@@ -199,6 +203,7 @@ class JobDescriptionEmbedding(models.Model):
 
     class Meta:
         db_table = 'job_embeddings'
+        ordering = ['-last_accessed']
         indexes = [
             models.Index(fields=['job_description_hash']),
             models.Index(fields=['user', 'last_accessed']),
@@ -233,6 +238,7 @@ class ModelCostTracking(models.Model):
 
     class Meta:
         db_table = 'model_cost_tracking'
+        ordering = ['-date', 'model_name']
         unique_together = ['user', 'date', 'model_name']
         indexes = [
             models.Index(fields=['date', 'model_name']),
@@ -264,6 +270,7 @@ class CircuitBreakerState(models.Model):
 
     class Meta:
         db_table = 'circuit_breaker_states'
+        ordering = ['model_name']
 
     def record_failure(self):
         """Record a failure and update state if needed"""
