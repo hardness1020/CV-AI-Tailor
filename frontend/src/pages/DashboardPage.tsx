@@ -6,10 +6,8 @@ import {
   Download,
   TrendingUp,
   FileText,
-  Clock,
   Award,
   LogIn,
-  User,
   LogOut
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -59,7 +57,7 @@ export default function DashboardPage() {
             totalArtifacts: artifactsResponse.count,
             totalGenerations: completedDocuments.length,
             recentActivity: artifactsResponse.results.filter(
-              a => new Date(a.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+              a => new Date(a.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
             ).length
           })
         } catch (error) {
@@ -78,154 +76,164 @@ export default function DashboardPage() {
 
   // Dashboard content component for authenticated users
   const DashboardContent = () => (
-    <div className="space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Welcome back! Here's an overview of your CV generation journey.
-        </p>
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-full mb-3">
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-700">Dashboard Overview</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mb-2">
+              Welcome back,
+              <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent"> {user?.first_name}</span>
+            </h1>
+            <p className="text-gray-600 max-w-2xl">
+              Track your artifacts and CV generation progress across your professional portfolio.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Artifacts</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalArtifacts}</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">Total Artifacts</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.totalArtifacts}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <FolderOpen className="h-6 w-6 text-blue-600" />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <FolderOpen className="h-5 w-5 text-purple-600" />
             </div>
           </div>
           <div className="mt-4">
             <Link
               to="/artifacts"
-              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
             >
               Manage artifacts →
             </Link>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">CVs Generated</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalGenerations}</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">CVs Generated</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.totalGenerations}</p>
             </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <Zap className="h-6 w-6 text-green-600" />
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Zap className="h-5 w-5 text-blue-600" />
             </div>
           </div>
           <div className="mt-4">
             <Link
               to="/generate"
-              className="text-sm text-green-600 hover:text-green-500 font-medium"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               Generate new CV →
             </Link>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Recent Activity</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.recentActivity}</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">Recent Activity</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.recentActivity}</p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-full">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-orange-600" />
             </div>
           </div>
-          <p className="mt-4 text-sm text-gray-500">New artifacts this week</p>
+          <div className="mt-4">
+            <p className="text-sm text-gray-600">New artifacts this week</p>
+          </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             to="/artifacts?action=upload"
-            className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
           >
-            <div className="p-2 bg-blue-100 rounded-md">
-              <FolderOpen className="h-5 w-5 text-blue-600" />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <FolderOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
               <p className="font-medium text-gray-900">Upload Artifact</p>
-              <p className="text-sm text-gray-500">Add a new project or document</p>
+              <p className="text-sm text-gray-600">Add a new project or document</p>
             </div>
           </Link>
 
           <Link
             to="/generate"
-            className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
           >
-            <div className="p-2 bg-green-100 rounded-md">
-              <Zap className="h-5 w-5 text-green-600" />
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Zap className="h-5 w-5 text-blue-600" />
             </div>
             <div>
               <p className="font-medium text-gray-900">Generate CV</p>
-              <p className="text-sm text-gray-500">Create a targeted resume</p>
+              <p className="text-sm text-gray-600">Create a targeted resume</p>
             </div>
           </Link>
 
-          <button
-            disabled
-            className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg opacity-50 cursor-not-allowed"
-          >
-            <div className="p-2 bg-gray-100 rounded-md">
+          <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg opacity-50">
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
               <Download className="h-5 w-5 text-gray-400" />
             </div>
             <div>
               <p className="font-medium text-gray-900">Export Documents</p>
-              <p className="text-sm text-gray-500">Coming soon</p>
+              <p className="text-sm text-gray-600">Coming soon</p>
             </div>
-          </button>
+          </div>
         </div>
       </div>
 
       {/* Recent Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Artifacts */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Recent Artifacts</h2>
-            <Link to="/artifacts" className="text-sm text-blue-600 hover:text-blue-500">
-              View all
+            <Link to="/artifacts" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+              View all →
             </Link>
           </div>
 
           {recentArtifacts.length > 0 ? (
             <div className="space-y-3">
               {recentArtifacts.map((artifact) => (
-                <div key={artifact.id} className="flex items-start space-x-3 p-3 border border-gray-100 rounded-lg">
-                  <div className="p-2 bg-blue-100 rounded-md">
-                    <FileText className="h-4 w-4 text-blue-600" />
+                <div key={artifact.id} className="flex items-start gap-3 p-3 border border-gray-100 rounded-lg hover:border-gray-200 hover:bg-gray-50 transition-colors">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-4 w-4 text-purple-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{artifact.title}</p>
-                    <p className="text-sm text-gray-500 truncate">{artifact.description}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Clock className="h-3 w-3 text-gray-400" />
-                      <span className="text-xs text-gray-500">
-                        {new Date(artifact.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
+                    <h3 className="font-medium text-gray-900 truncate">{artifact.title}</h3>
+                    <p className="text-sm text-gray-600 truncate">{artifact.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(artifact.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-6">
-              <FolderOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No artifacts yet</p>
+            <div className="text-center py-8">
+              <div className="w-12 h-12 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-3">
+                <FolderOpen className="h-6 w-6 text-gray-400" />
+              </div>
+              <h3 className="font-medium text-gray-900 mb-1">No artifacts yet</h3>
+              <p className="text-sm text-gray-600 mb-4">Start building your professional portfolio</p>
               <Link
                 to="/artifacts"
-                className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
               >
                 Upload your first artifact
               </Link>
@@ -234,43 +242,49 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Generations */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Recent CV Generations</h2>
-            <Link to="/generate" className="text-sm text-green-600 hover:text-green-500">
-              Generate new
+            <Link to="/generate" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Generate new →
             </Link>
           </div>
 
           {recentGenerations.length > 0 ? (
             <div className="space-y-3">
               {recentGenerations.map((generation) => (
-                <div key={generation.id} className="flex items-start space-x-3 p-3 border border-gray-100 rounded-lg">
-                  <div className="p-2 bg-green-100 rounded-md">
-                    <Award className="h-4 w-4 text-green-600" />
+                <div key={generation.id} className="flex items-start gap-3 p-3 border border-gray-100 rounded-lg hover:border-gray-200 hover:bg-gray-50 transition-colors">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Award className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">CV Generation</p>
-                    <p className="text-sm text-gray-500">
-                      Status: {generation.status === 'completed' ? 'Completed' : 'Processing'}
-                    </p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Clock className="h-3 w-3 text-gray-400" />
-                      <span className="text-xs text-gray-500">
-                        {new Date(generation.createdAt).toLocaleDateString()}
+                    <h3 className="font-medium text-gray-900">CV Generation</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        generation.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {generation.status === 'completed' ? 'Completed' : 'Processing'}
                       </span>
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(generation.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-6">
-              <Zap className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No CV generations yet</p>
+            <div className="text-center py-8">
+              <div className="w-12 h-12 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-3">
+                <Zap className="h-6 w-6 text-gray-400" />
+              </div>
+              <h3 className="font-medium text-gray-900 mb-1">No CV generations yet</h3>
+              <p className="text-sm text-gray-600 mb-4">Create your first AI-powered CV</p>
               <Link
                 to="/generate"
-                className="text-sm text-green-600 hover:text-green-500 font-medium"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Generate your first CV
               </Link>
@@ -329,10 +343,10 @@ export default function DashboardPage() {
                   >
                     <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
-                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        {user?.first_name?.[0]}{user?.last_name?.[0]}
                       </span>
                     </div>
-                    <span className="text-sm font-medium">{user?.firstName} {user?.lastName}</span>
+                    <span className="text-sm font-medium">{user?.first_name} {user?.last_name}</span>
                   </button>
                   <button
                     onClick={handleLogout}
@@ -365,7 +379,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -421,9 +435,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <button
                 onClick={() => handleProtectedAction('/artifacts?action=upload')}
                 className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"

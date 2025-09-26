@@ -3,19 +3,16 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { User, Mail, MapPin, Globe, Save, Eye, EyeOff } from 'lucide-react'
+import { User, Save, Eye, EyeOff, Shield, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
+import { Button } from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
 import { useErrorHandler } from '@/utils/errorHandling'
 
 const profileSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  username: z.string().min(1, 'Username is required'),
   email: z.string().email('Please enter a valid email address'),
-  bio: z.string().optional(),
-  location: z.string().optional(),
-  website: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
 })
 
 const passwordSchema = z.object({
@@ -32,7 +29,7 @@ type PasswordForm = z.infer<typeof passwordSchema>
 
 export default function ProfilePage() {
   const { user, setUser } = useAuthStore()
-  const { handleError, handleValidationError } = useErrorHandler()
+  const { handleValidationError } = useErrorHandler()
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
@@ -47,12 +44,8 @@ export default function ProfilePage() {
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: user?.first_name || '',
-      lastName: user?.last_name || '',
+      username: user?.username || '',
       email: user?.email || '',
-      bio: user?.bio || '',
-      location: user?.location || '',
-      website: user?.website_url || '',
     },
   })
 
@@ -69,12 +62,8 @@ export default function ProfilePage() {
     setIsProfileLoading(true)
     try {
       const updateData = {
-        first_name: data.firstName,
-        last_name: data.lastName,
+        username: data.username,
         email: data.email,
-        bio: data.bio || null,
-        location: data.location || null,
-        website_url: data.website || null,
       }
 
       const updatedUser = await apiClient.updateProfile(updateData)
@@ -106,52 +95,43 @@ export default function ProfilePage() {
 
   const tabs = [
     { id: 'profile', name: 'Profile Information', icon: User },
-    { id: 'security', name: 'Security', icon: Mail },
+    { id: 'security', name: 'Security Settings', icon: Shield },
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your account information and security settings.
-        </p>
-      </div>
-
-      {/* Profile Header */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center space-x-4">
-          <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
-            <span className="text-2xl font-bold text-blue-600">
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
-            </span>
-          </div>
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              {user?.first_name} {user?.last_name}
-            </h2>
-            <p className="text-gray-600">{user?.email}</p>
-            <p className="text-sm text-gray-500">
-              Member since {new Date(user?.created_at || '').toLocaleDateString()}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-full mb-3">
+              <User className="h-4 w-4 text-indigo-600" />
+              <span className="text-sm font-medium text-indigo-700">Profile Management</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mb-2">
+              Account &
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Profile</span>
+            </h1>
+            <p className="text-gray-600 max-w-2xl">
+              Customize your professional profile and manage account security settings.
             </p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6">
+          <nav className="-mb-px flex px-6">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as 'profile' | 'security')}
                 className={cn(
-                  'flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+                  'flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm transition-all duration-200 relative',
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 )}
               >
                 <tab.icon className="h-4 w-4" />
@@ -163,119 +143,50 @@ export default function ProfilePage() {
 
         <div className="p-6">
           {activeTab === 'profile' && (
-            <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name
-                  </label>
-                  <input
-                    {...registerProfile('firstName')}
-                    type="text"
-                    className={cn(
-                      'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                      profileErrors.firstName && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                    )}
-                  />
-                  {profileErrors.firstName && (
-                    <p className="mt-1 text-sm text-red-600">{profileErrors.firstName.message}</p>
+            <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-8">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Username
+                </label>
+                <input
+                  {...registerProfile('username')}
+                  type="text"
+                  className={cn(
+                    'w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors',
+                    profileErrors.username && 'border-red-300 focus:border-red-500 focus:ring-red-500'
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name
-                  </label>
-                  <input
-                    {...registerProfile('lastName')}
-                    type="text"
-                    className={cn(
-                      'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                      profileErrors.lastName && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                    )}
-                  />
-                  {profileErrors.lastName && (
-                    <p className="mt-1 text-sm text-red-600">{profileErrors.lastName.message}</p>
-                  )}
-                </div>
+                />
+                {profileErrors.username && (
+                  <p className="mt-2 text-sm text-red-600">{profileErrors.username.message}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Email Address
                 </label>
                 <input
                   {...registerProfile('email')}
                   type="email"
                   className={cn(
-                    'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                    'w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors',
                     profileErrors.email && 'border-red-300 focus:border-red-500 focus:ring-red-500'
                   )}
                 />
                 {profileErrors.email && (
-                  <p className="mt-1 text-sm text-red-600">{profileErrors.email.message}</p>
+                  <p className="mt-2 text-sm text-red-600">{profileErrors.email.message}</p>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bio
-                </label>
-                <textarea
-                  {...registerProfile('bio')}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tell us about yourself..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Location
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      {...registerProfile('location')}
-                      type="text"
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="City, Country"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Website
-                  </label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      {...registerProfile('website')}
-                      type="url"
-                      className={cn(
-                        'w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                        profileErrors.website && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      )}
-                      placeholder="https://your-website.com"
-                    />
-                  </div>
-                  {profileErrors.website && (
-                    <p className="mt-1 text-sm text-red-600">{profileErrors.website.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <button
+              <div className="flex justify-end pt-4 border-t border-gray-200">
+                <Button
                   type="submit"
                   disabled={isProfileLoading}
-                  className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="h-4 w-4" />
-                  <span>{isProfileLoading ? 'Saving...' : 'Save Changes'}</span>
-                </button>
+                  {isProfileLoading ? 'Saving Changes...' : 'Save Changes'}
+                </Button>
               </div>
             </form>
           )}
@@ -283,134 +194,165 @@ export default function ProfilePage() {
           {activeTab === 'security' && (
             <div className="space-y-8">
               {/* Change Password */}
-              <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Ensure your account is secure by using a strong password.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      {...registerPassword('currentPassword')}
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      className={cn(
-                        'w-full pr-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                        passwordErrors.currentPassword && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      )}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </button>
+              <div className="bg-gray-50 rounded-xl p-6">
+                <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <Shield className="h-4 w-4 text-indigo-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 ml-11">
+                      Strengthen your account security with a robust password that meets our security standards.
+                    </p>
                   </div>
-                  {passwordErrors.currentPassword && (
-                    <p className="mt-1 text-sm text-red-600">{passwordErrors.currentPassword.message}</p>
-                  )}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      {...registerPassword('newPassword')}
-                      type={showNewPassword ? 'text' : 'password'}
-                      className={cn(
-                        'w-full pr-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                        passwordErrors.newPassword && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      )}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </button>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        {...registerPassword('currentPassword')}
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        className={cn(
+                          'w-full pr-12 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white',
+                          passwordErrors.currentPassword && 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                        )}
+                        placeholder="Enter your current password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordErrors.currentPassword && (
+                      <p className="mt-2 text-sm text-red-600">{passwordErrors.currentPassword.message}</p>
+                    )}
                   </div>
-                  {passwordErrors.newPassword && (
-                    <p className="mt-1 text-sm text-red-600">{passwordErrors.newPassword.message}</p>
-                  )}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      {...registerPassword('confirmPassword')}
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      className={cn(
-                        'w-full pr-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                        passwordErrors.confirmPassword && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      )}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </button>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        {...registerPassword('newPassword')}
+                        type={showNewPassword ? 'text' : 'password'}
+                        className={cn(
+                          'w-full pr-12 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white',
+                          passwordErrors.newPassword && 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                        )}
+                        placeholder="Enter a strong new password (8+ characters)"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordErrors.newPassword && (
+                      <p className="mt-2 text-sm text-red-600">{passwordErrors.newPassword.message}</p>
+                    )}
                   </div>
-                  {passwordErrors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-600">{passwordErrors.confirmPassword.message}</p>
-                  )}
-                </div>
 
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isPasswordLoading}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isPasswordLoading ? 'Changing...' : 'Change Password'}
-                  </button>
-                </div>
-              </form>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        {...registerPassword('confirmPassword')}
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        className={cn(
+                          'w-full pr-12 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white',
+                          passwordErrors.confirmPassword && 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                        )}
+                        placeholder="Confirm your new password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordErrors.confirmPassword && (
+                      <p className="mt-2 text-sm text-red-600">{passwordErrors.confirmPassword.message}</p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t border-gray-200">
+                    <Button
+                      type="submit"
+                      disabled={isPasswordLoading}
+                      className="group bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5" />
+                        <span>{isPasswordLoading ? 'Changing Password...' : 'Change Password'}</span>
+                        {!isPasswordLoading && <ArrowRight className="h-5 w-5 transform group-hover:translate-x-1 transition-transform duration-200" />}
+                      </div>
+                    </Button>
+                  </div>
+                </form>
+              </div>
 
               {/* Account Information */}
-              <div className="border-t border-gray-200 pt-8">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900">Account Created</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(user?.created_at || '').toLocaleDateString()}
-                      </p>
+              <div className="bg-gray-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <User className="h-4 w-4 text-gray-600" />
+                  </div>
+                  Account Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-1">Account Created</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(user?.created_at || '').toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900">Last Updated</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(user?.updated_at || '').toLocaleDateString()}
-                      </p>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-1">Last Updated</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(user?.updated_at || '').toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

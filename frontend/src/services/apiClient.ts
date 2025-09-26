@@ -249,14 +249,14 @@ class ApiClient {
   // Generation endpoints
   async generateCV(request: CVGenerationRequest): Promise<{ generation_id: string }> {
     const response = await this.client.post<{ generation_id: string }>(
-      '/v1/generate/cv',
+      '/v1/generate/cv/',
       request
     )
     return response.data
   }
 
   async getGeneration(id: string): Promise<GeneratedDocument> {
-    const response = await this.client.get<GeneratedDocument>(`/v1/generate/cv/${id}`)
+    const response = await this.client.get<GeneratedDocument>(`/v1/generate/${id}/`)
     return response.data
   }
 
