@@ -225,27 +225,18 @@ For testing actual API integrations with OpenAI and Anthropic services, the `llm
 
 For development and testing purposes, the following accounts have been created:
 
-#### Superuser Account (Admin Access)
-- **Username**: `admin`
-- **Email**: `admin@cvtailor.test`
-- **Password**: `adminpass123`
-- **Privileges**: Can access Django Admin, full API access
-
-#### Regular User Account (App Testing)
-- **Username**: `testuser`
-- **Email**: `test@cvtailor.test`
-- **Password**: `testpass123`
-- **Privileges**: Standard user, frontend app access only
+#### Superuser Account
+- Credentials are stored in the `.env` file for security
+- **Privileges**: Can access Django Admin, full API access, web application
 
 **Login Instructions**:
 
 1. **Django Admin** (Session-based):
    - URL: `http://localhost:8000/admin/`
-   - Use: **Username** + Password (`admin` / `adminpass123`)
+   - Use: **Username** + Password (see `.env` file)
 
 2. **Frontend App** (JWT-based):
-   - **Superuser**: Email + Password (`admin@cvtailor.test` / `adminpass123`)
-   - **Regular User**: Email + Password (`test@cvtailor.test` / `testpass123`)
+   - Use Email + Password (see `.env` file)
    - Login via API: `POST /api/v1/auth/login/` with email/password JSON
 
 **Important Notes**:
@@ -270,6 +261,6 @@ docker-compose up -d db
 # Run migrations
 uv run python manage.py migrate
 
-# Create superuser
-echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@cvtailor.test', 'adminpass123')" | uv run python manage.py shell
+# Create superuser (credentials from .env)
+echo "from django.contrib.auth import get_user_model; import os; User = get_user_model(); User.objects.create_superuser(os.getenv('DJANGO_SUPERUSER_USERNAME'), os.getenv('DJANGO_SUPERUSER_EMAIL'), os.getenv('DJANGO_SUPERUSER_PASSWORD'))" | uv run python manage.py shell
 ```
