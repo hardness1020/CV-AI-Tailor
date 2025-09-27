@@ -34,7 +34,7 @@ FastAPI (lighter, but re-implement admin/auth), Flask (+plugins)
 Keep service boundaries; if DRF blocks latency goals, rebase views to FastAPI gateway.
 
 ## Links
-- PRD: `prd-20250822.md`
+- PRD: `prd.md`
 - TECH-SPECs: `spec-20250822-frontend.md`
 - FEATUREs: `ft-001-hover-badge.md`, `ft-002-explain-tooltip.md`
 ```

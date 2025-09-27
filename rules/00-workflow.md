@@ -8,7 +8,7 @@
 
 
 ## Authoritative Paths & Naming
-- **PRD** → `docs/prds/prd-YYYYMMDD.md` (new dated file for significant business changes; do **not** edit old; maintain `docs/prds/index.md`)
+- **PRD** → `docs/prds/prd.md` (single PRD file per project; edit directly for all changes; maintain changelog within the file)
 - **SPEC (TECH SPEC)** → `docs/specs/spec-YYYYMMDD-<spec>.md` (no subdirs; `<spec>` in `{system, api, frontend, llm, ...}`; maintain `docs/specs/index.md`)
   - **Architecture section contains only:** (1) **comprehensive diagram** (frameworks + relationships) and (2) **component inventory table**.
   - Minor edits → update + **Changelog**; material contract/SLO/framework/topology change → **new dated snapshot** (prior marked **Superseded**).
@@ -22,8 +22,8 @@
 
 ### Stage A — **Initiate**
 - **Input:** Problem or idea.
-- **Action:** If scope affects product goals/metrics → create/point to **PRD** (`prd-YYYYMMDD.md`). Minor bug/chores can skip to Stage D with a short note in PR.
-- **Output (generate file):** `docs/prds/prd-YYYYMMDD.md` (or link existing).
+- **Action:** If scope affects product goals/metrics → create/update **PRD** (`prd.md`). Minor bug/chores can skip to Stage D with a short note in PR.
+- **Output (generate file):** `docs/prds/prd.md` (or link existing).
 - **Cursor Rule Compliance:** Generated PRD must follow 01-prd.md format and standards.
 - **Exit Gate:** PRD exists **or** justified exemption noted in PR.
 - **REVIEW STOP:** **Agent must stop here and wait for human review/approval before proceeding to Stage B.**

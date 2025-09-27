@@ -8,12 +8,12 @@
 
 ### Path & Naming (mandatory)
 - **Path:** `docs/prds/`
-- **Naming:** `prd-YYYYMMDD.md` (date of acceptance/version)
-  - **Do not edit** older PRDs; create a **new version** PRD when making significant updates.
+- **Naming:** `prd.md` (single PRD file per project)
+  - **Edit the existing PRD** file directly; maintain only one PRD file per project.
 
 ### Versioning policy
-- **Minor editorial fixes:** update the current file + add to **Changelog**.
-- **Material changes** (significant updates): create a **new dated snapshot**.
+- **All changes:** update the current file + add to **Changelog** section.
+- **Major updates:** increment version number in header and document changes in changelog.
 
 ### Content Requirements (must include)
 - **Header** — version, file, owners, last_updated
@@ -37,7 +37,7 @@
 ```md
 # PRD — Article Credibility Score
 **Version:** v1.0.0
-**File:** docs/prds/prd-20250822.md  
+**File:** docs/prds/prd.md  
 **Owners:** PM (A. Lee), Eng (M. Chang)  
 **Last_updated:** 2025-08-22  
 

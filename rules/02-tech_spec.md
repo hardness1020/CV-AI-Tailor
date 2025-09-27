@@ -50,7 +50,7 @@
 **Version**: v1.0.0
 **File:** docs/specs/spec-20250822-api.md  
 **Status:** Accepted
-**PRD:** `prd-20250820.md`  
+**PRD:** `prd.md`  
 **Contract Versions:** API v1.3  •  Schema v1.1  •  Prompt Set v1.4
 
 ## Overview & Goals
