@@ -47,10 +47,10 @@ class AuthenticationAPITests(APITestCase):
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
         self.assertEqual(response.data['user']['email'], 'newuser@example.com')
-        self.assertEqual(response.data['user']['username'], 'newuser')
+        self.assertEqual(response.data['user']['username'], 'newuser@example.com')
 
         new_user = User.objects.get(email='newuser@example.com')
-        self.assertEqual(new_user.username, 'newuser')
+        self.assertEqual(new_user.username, 'newuser@example.com')
         self.assertEqual(new_user.first_name, 'New')
 
     def test_user_registration_password_mismatch(self):

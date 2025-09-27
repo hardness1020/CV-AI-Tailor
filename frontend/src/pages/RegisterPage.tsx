@@ -12,7 +12,6 @@ import { cn } from '@/utils/cn'
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  username: z.string().min(3, 'Username must be at least 3 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
@@ -66,8 +65,6 @@ export default function RegisterPage() {
           toast.error(errorData.error)
         } else if (errorData.email) {
           toast.error(`Email: ${errorData.email[0]}`)
-        } else if (errorData.username) {
-          toast.error(`Username: ${errorData.username[0]}`)
         } else if (errorData.password) {
           toast.error(`Password: ${errorData.password[0]}`)
         } else {
@@ -138,24 +135,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
-              </label>
-              <input
-                {...register('username')}
-                type="text"
-                autoComplete="username"
-                className={cn(
-                  'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm',
-                  errors.username && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                )}
-                placeholder="Choose a username"
-              />
-              {errors.username && (
-                <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
-              )}
-            </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">

@@ -11,7 +11,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'username', 'first_name', 'last_name', 'password', 'password_confirm')
+        fields = ('email', 'first_name', 'last_name', 'password', 'password_confirm')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -20,6 +20,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
+        # Set username to be the same as email
+        validated_data['username'] = validated_data['email']
         user = User.objects.create_user(**validated_data)
         return user
 
@@ -31,7 +33,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
                  'profile_image', 'phone', 'linkedin_url', 'github_url',
                  'website_url', 'bio', 'location', 'preferred_cv_template',
                  'email_notifications', 'created_at', 'updated_at')
-        read_only_fields = ('id', 'email', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'email', 'username', 'created_at', 'updated_at')
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
