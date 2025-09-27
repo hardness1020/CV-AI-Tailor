@@ -83,4 +83,7 @@ htmlcov/
 # Claude
 .claude/
 
+# test
+.playwright-mcp/
+
 idea.md

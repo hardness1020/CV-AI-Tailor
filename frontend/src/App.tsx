@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/services/apiClient'
 import Layout from '@/components/Layout'
-import PublicLayout from '@/components/PublicLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -42,16 +41,8 @@ function App() {
       <Route path="/" element={<DashboardPage />} />
 
       {/* Public routes */}
-      <Route path="/login" element={
-        <PublicLayout>
-          <LoginPage />
-        </PublicLayout>
-      } />
-      <Route path="/register" element={
-        <PublicLayout>
-          <RegisterPage />
-        </PublicLayout>
-      } />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* Protected routes */}
       <Route

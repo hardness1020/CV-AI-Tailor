@@ -81,17 +81,8 @@ export default function LoginPage() {
       <div className="max-w-md w-full relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="relative inline-block mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl mx-auto">
-              <FileText className="h-10 w-10 text-white" />
-            </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center transform rotate-12">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-          </div>
-
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 border border-blue-200 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 border border-blue-200 rounded-full mb-2">
               <Lock className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-semibold text-blue-700">Secure Login</span>
             </div>
@@ -100,7 +91,7 @@ export default function LoginPage() {
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"> CV Tailor</span>
             </h1>
             <p className="text-gray-600 leading-relaxed">
-              Generate targeted CVs with AI-powered insights from your professional artifacts
+              Generate tailored CVs with AI-powered insights from your professional artifacts
             </p>
           </div>
         </div>
