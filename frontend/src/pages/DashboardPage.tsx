@@ -307,70 +307,19 @@ export default function DashboardPage() {
   // Public dashboard for unauthenticated users
   return (
     <div className="min-h-screen bg-gray-50">
-      {/*Top Navigation*/}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
-              <FileText className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">CV Tailor</span>
-            </Link>
-
-            {/* Navigation Links & Auth */}
-            <div className="flex items-center space-x-4">
-              {!isAuthenticated ? (
-                <>
-                  <Link
-                    to="/register"
-                    className="text-gray-700 hover:text-gray-900 transition-colors"
-                  >
-                    Sign Up
-                  </Link>
-                  <Link
-                    to="/login"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign In
-                  </Link>
-                </>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => handleProtectedAction('/profile')}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-sm font-medium text-blue-600">
-                        {user?.first_name?.[0]}{user?.last_name?.[0]}
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium">{user?.first_name} {user?.last_name}</span>
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="text-gray-400 hover:text-gray-500 transition-colors"
-                    title="Logout"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {isAuthenticated ? 'Dashboard' : 'Welcome to CV Tailor'}
+              {isAuthenticated ? 'Dashboard' : (
+                <span className="inline-block bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent animate-pulse hover:scale-105 transition-transform duration-300 ease-in-out drop-shadow-lg">
+                  Welcome to CV Tailor
+                </span>
+              )}
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mb-10 mt-2 text-gray-600">
               {isAuthenticated
                 ? "Welcome back! Here's an overview of your CV generation journey."
                 : 'Generate targeted CVs with evidence from your professional artifacts. Sign in to get started.'
